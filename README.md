@@ -38,6 +38,10 @@ Then visit `http://localhost:8000`.
 - Tool names are examples of common choices, not an exhaustive or ranked list. Commercial EDA licenses and foundry PDKs vary by company and process node. Prices and availability of boards change, so check the seller's page.
 - Fonts (Fredoka and Nunito) load from Google Fonts. If they can't load, the site falls back to a plain rounded system font.
 
+## License
+
+Released under the [MIT License](LICENSE).
+
 ## Made by
 
 **PRATHIK AMTE**: [LinkedIn](https://www.linkedin.com/in/prathik-amte-313367296/)
