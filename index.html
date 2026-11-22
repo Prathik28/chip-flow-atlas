@@ -401,6 +401,18 @@ footer{margin-top:48px}
 /* ---- keep the Map at a comfortable size on wide screens ---- */
 #v-diagram .hint,#v-diagram .diagram-box,#v-diagram .dpanel{max-width:960px;margin-left:auto;margin-right:auto}
 #v-diagram .dpanel{margin-top:14px}
+
+/* ---- phone fixes ---- */
+.scrim{display:none}
+#sideclose{display:none;padding:4px 10px;font-size:15px;box-shadow:2px 2px 0 var(--ink);flex:none}
+#dsvg{min-width:0}
+@media(max-width:860px){
+  .side.open + .scrim{display:block;position:fixed;inset:0;background:rgba(36,28,58,.45);z-index:25}
+  #sideclose{display:inline-flex}
+}
+@media(max-width:560px){
+  .hovername{top:50px;bottom:auto;left:12px;transform:none;font-size:14px;max-width:calc(100% - 24px)}
+}
 </style>
 </head>
 <body>
@@ -409,6 +421,7 @@ footer{margin-top:48px}
   <div class="side-top">
     <div class="brand"><span class="logo">🧩</span><span class="brand-text"> Chip Flow <span>Atlas</span></span></div>
     <button class="chip" id="collapse" aria-label="Collapse sidebar" title="Collapse / expand sidebar">«</button>
+    <button class="chip" id="sideclose" aria-label="Close menu">✕</button>
   </div>
   <p class="brand-sub">Learn how chips are made, one small step at a time.</p>
   <nav class="tabs" role="tablist" aria-label="Sections">
@@ -425,6 +438,7 @@ footer{margin-top:48px}
   </div>
   <div class="side-tip">💡 <b>New here?</b> Click <b>Start here</b>, pick a goal, and follow the numbered path.</div>
 </aside>
+<div class="scrim" id="scrim"></div>
 <main class="main">
 <div class="topbar">
   <button class="chip" id="menu" aria-label="Open menu">☰</button>
@@ -831,9 +845,10 @@ const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
 function wrap(s,max){const w=s.split(" "),out=[];let c="";w.forEach(x=>{if((c+" "+x).trim().length>max&&c){out.push(c);c=x}else c=(c+" "+x).trim()});out.push(c);return out}
 function renderDiagram(){
   const st=TRACKS[track].stages,back=BACK[track]||{};
-  const per=3,W=220,H=88,gx=64,gy=70,pad=14;
+  const cw=($("#v-diagram .diagram-box").clientWidth||innerWidth-30)-20;
+  const per=cw<460?1:cw<760?2:3,W=220,H=88,gx=64,gy=70,pad=14,extra=per===1?70:0;
   const rows=Math.ceil(st.length/per);
-  const VW=pad*2+per*W+(per-1)*gx, VH=pad*2+rows*H+(rows-1)*gy;
+  const VW=pad*2+per*W+(per-1)*gx+extra, VH=pad*2+rows*H+(rows-1)*gy;
   const pos=i=>{const r=Math.floor(i/per),c=i%per,col=r%2===0?c:per-1-c;return{x:pad+col*(W+gx),y:pad+r*(H+gy),r}};
   const ctr=i=>{const p=pos(i);return{x:p.x+W/2,y:p.y+H/2}};
   let s=`<defs>
@@ -847,7 +862,10 @@ function renderDiagram(){
     s+=`<path d="${d}" fill="none" style="stroke:var(--muted)" stroke-width="2" marker-end="url(#ah)"/>`;
   }
   // failure loop for selected box (drawn under boxes)
-  if(back[sel]!=null){
+  if(back[sel]!=null&&per===1){
+    const a=ctr(sel),b=ctr(back[sel]),xr=pad+W;
+    s+=`<path d="M${xr} ${a.y}C${xr+70} ${a.y} ${xr+70} ${b.y} ${xr+4} ${b.y}" fill="none" style="stroke:var(--bad)" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ahr)"/>`;
+  }else if(back[sel]!=null){
     const a=ctr(sel),b=ctr(back[sel]);
     const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
     const off=Math.min(110,40+len*0.15);
@@ -891,11 +909,18 @@ function renderDiagram(){
 /* ---------- tabs ---------- */
 function showView(v){
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
-  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
   $("#tracks").hidden=!(v==="flow"||v==="diagram");
   $("#side").classList.remove("open");window.scrollTo(0,0);
 }
 $("#menu").onclick=()=>$("#side").classList.toggle("open");
+const closeMenu=()=>$("#side").classList.remove("open");
+$("#sideclose").onclick=closeMenu;$("#scrim").onclick=closeMenu;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMenu()});
+/* shorter search hint on small screens; redraw the Map when the window size changes */
+function setPh(){$("#q").placeholder=innerWidth<560?"Search any tool…":"Search any tool — e.g. Yosys, Calibre, oscilloscope…"}
+let rzT;window.addEventListener("resize",()=>{clearTimeout(rzT);rzT=setTimeout(()=>{setPh();if(!$("#v-diagram").hidden)renderDiagram()},150)});
+setPh();
 /* collapsible sidebar (desktop) */
 function setCollapsed(c){
   document.querySelector(".app").classList.toggle("collapsed",c);
