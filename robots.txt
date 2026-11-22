@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chip-flow-atlas.web.app/sitemap.xml
