@@ -379,6 +379,7 @@ footer{font-size:13px}
 .wl{font:700 10px Nunito,sans-serif;fill:var(--muted)}
 .cub[data-part="fpga"].tick .f.top{background-color:#3b82f6}
 .cub.on .f{box-shadow:0 0 12px 4px var(--c)}
+.chip:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}
 
 /* ---- footer contact ---- */
 footer{margin-top:48px}
@@ -1042,7 +1043,7 @@ const curS=()=>SAMPLES[tryKey];
 function snap(){return{b:[...tryBtn],l:curS().out(trySt,tryBtn)}}
 function tryReset(){trySt=curS().init();tryN=0;tryHist=[snap()];tryRender()}
 function tryTickOnce(){
-  if($("#v-board").hidden)return;
+  if(!tryKey||$("#v-board").hidden)return;
   trySt=curS().step(trySt,tryBtn);tryN++;
   tryHist.push(snap());if(tryHist.length>16)tryHist.shift();
   tryRender(true);
@@ -1051,7 +1052,7 @@ function setRun(r){
   tryRun=r;clearInterval(tryTimer);if(r)tryTimer=setInterval(tryTickOnce,1000/tryHz);
   const b=$("#trun");if(b)b.textContent=r?"⏸ Pause":"▶ Run";
 }
-function toggleBtn(i){tryBtn[i]^=1;tryHist[tryHist.length-1]=snap();tryRender()}
+function toggleBtn(i){tryBtn[i]^=1;if(tryKey)tryHist[tryHist.length-1]=snap();tryRender()}
 function hlCode(ln){
   const parts=ln.split("//"),cm=parts.length>1?"//"+parts.slice(1).join("//"):"";
   const esc2=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;");
@@ -1072,7 +1073,28 @@ function drawWave(){
   });
   $("#wave").innerHTML=s+"</svg>";
 }
+function tryIdlePaint(){
+  document.querySelectorAll("#b3d .cub[data-led]").forEach(c=>{const i=+c.dataset.led;c.classList.remove("on");c.style.setProperty("--c",LED_OFF[i])});
+  document.querySelectorAll("#ledrow .ld").forEach(d=>d.classList.remove("on"));
+  [0,1].forEach(i=>{
+    const cap=document.querySelector(`#b3d .cub[data-cap][data-btn="${i}"]`);
+    if(cap){cap.style.transform=`translateZ(${tryBtn[i]?BZ+2:BZ+6}px)`;cap.style.setProperty("--c",tryBtn[i]?"#1e40af":"#3b82f6")}
+    const pb=$("#pbtn"+i);if(pb)pb.setAttribute("aria-pressed",!!tryBtn[i]);
+  });
+  $("#code").innerHTML='<span class="ln">&nbsp;</span><span class="ln">  👆 Pick a sample program above</span><span class="ln">  to load it onto the board.</span><span class="ln">&nbsp;</span>';
+  $("#inside").innerHTML="";$("#clk").textContent="";$("#wave").innerHTML="";
+  $("#say").textContent="No program is loaded yet, so the FPGA is idle and all LEDs are off.";
+}
+function tryIdle(){
+  tryKey=null;tryBtn=[0,0];setRun(false);
+  ["trun","tstep","treset"].forEach(id=>$("#"+id).disabled=true);
+  document.querySelectorAll("#samples .chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+  $("#tintro").textContent="The board is idle. Choose a program to load onto it.";
+  $("#thint").textContent="👆 Pick a sample program above.";
+  tryRender();
+}
 function tryRender(tick){
+  if(!tryKey){tryIdlePaint();return}
   const S=curS(),l=S.out(trySt,tryBtn),hot=new Set(S.hot(trySt,tryBtn));
   document.querySelectorAll("#b3d .cub[data-led]").forEach(c=>{const i=+c.dataset.led,on=!!l[i];c.classList.toggle("on",on);c.style.setProperty("--c",on?LED_ON[i]:LED_OFF[i])});
   document.querySelectorAll("#ledrow .ld").forEach((d,i)=>d.classList.toggle("on",!!l[i]));
@@ -1093,8 +1115,10 @@ function tryRender(tick){
 function selectSample(k){
   tryKey=k;tryBtn=[0,0];
   document.querySelectorAll("#samples .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.s===k));
-  $("#tintro").textContent=SAMPLES[k].intro;$("#thint").textContent="👉 "+SAMPLES[k].hint;
-  tryReset();
+  $("#tintro").textContent=SAMPLES[k].intro;
+  $("#thint").textContent="👉 "+SAMPLES[k].hint+(SAMPLES[k].comb?"":" Press ▶ Run to start the clock.");
+  ["trun","tstep","treset"].forEach(id=>$("#"+id).disabled=false);
+  tryReset();setRun(false);
 }
 function initTry(){
   $("#tryit").innerHTML=`<h2 class="sec">▶ Run a program on the board</h2>
@@ -1125,7 +1149,7 @@ function initTry(){
   $("#treset").onclick=()=>tryReset();
   $("#tspeed").onchange=e=>{tryHz=+e.target.value;if(tryRun)setRun(true)};
   $("#pbtn0").onclick=()=>toggleBtn(0);$("#pbtn1").onclick=()=>toggleBtn(1);
-  selectSample("blink");setRun(true);
+  tryIdle();
 }
 
 const REAL_BOARDS=[
