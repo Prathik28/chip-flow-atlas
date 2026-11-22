@@ -391,6 +391,12 @@ footer{margin-top:48px}
 .contact .links{margin:0}
 .contact .links a{font-size:14px;padding:6px 14px}
 .fineprint{margin:14px 4px 0;color:var(--muted);font-size:12.5px}
+
+/* ---- use the space: centre content, and widen it when the sidebar is collapsed ---- */
+.main{max-width:1080px;margin-left:auto;margin-right:auto;transition:max-width .2s}
+@media(min-width:861px){
+  .app.collapsed .main{max-width:1500px}
+}
 </style>
 </head>
 <body>
