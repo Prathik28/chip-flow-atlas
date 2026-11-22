@@ -1,0 +1,1186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chip Flow Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f14; --panel:#121923; --panel2:#18212d; --line:#2a3646; --text:#e6edf5; --muted:#8fa0b3;
+  --accent:#4cc9f0; --open:#5ee08a; --comm:#f4a259; --bad:#ff6b6b;
+  --p-front:#4cc9f0; --p-back:#b388ff; --p-sign:#ffd166; --p-si:#5ee08a;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f4f6f9;--panel:#fff;--panel2:#eef2f7;--line:#cfd8e3;--text:#14202e;--muted:#566578;--accent:#0a7ea4;--open:#12804a;--comm:#b4540a;--bad:#c62828;
+  --p-front:#0a7ea4;--p-back:#6b3fd1;--p-sign:#a97800;--p-si:#12804a}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 80px}
+header{padding:36px 0 16px}
+h1{margin:0;font-size:clamp(26px,5vw,38px);letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:6px 0 0;max-width:640px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 10px}
+.tab,.chip{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit;font-size:14px}
+.tab[aria-selected=true]{background:var(--accent);color:#04121a;border-color:var(--accent);font-weight:600}
+.chip[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 18px}
+.legend{color:var(--muted);font-size:13px;display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+/* flowchart */
+.flow{display:flex;flex-direction:column;align-items:stretch}
+.phase{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin:18px 0 8px;display:flex;align-items:center;gap:10px}
+.phase::after{content:"";flex:1;height:1px;background:var(--line)}
+.node{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--pc,var(--accent));border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
+.node:hover{border-color:var(--pc)}
+.node-head{display:flex;gap:12px;align-items:center}
+.num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--pc);color:#04121a;display:grid;place-items:center;font-weight:700;font-size:13px}
+.node h3{margin:0;font-size:16px}
+.node .one{margin:0;color:var(--muted);font-size:13.5px}
+.caret{margin-left:auto;color:var(--muted);transition:transform .2s}
+.node[aria-expanded=true] .caret{transform:rotate(180deg)}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pill{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel2)}
+.pill.open{color:var(--open);border-color:color-mix(in srgb,var(--open) 40%,transparent)}
+.pill.comm{color:var(--comm);border-color:color-mix(in srgb,var(--comm) 40%,transparent)}
+.detail{display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:14px}
+.node[aria-expanded=true] .detail{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.detail h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tool{padding:8px 0;border-bottom:1px solid var(--line)}
+.tool:last-child{border:0}
+.tool b{font-size:14px}
+.tool small{display:block;color:var(--muted)}
+.io{font-size:13.5px}
+.io div{margin-bottom:6px}
+.fail{margin-top:12px;font-size:13.5px;color:var(--bad)}
+.arrow{align-self:center;display:flex;flex-direction:column;align-items:center;color:var(--muted);height:30px;position:relative}
+.arrow::before{content:"";flex:1;width:2px;background:var(--line)}
+.arrow::after{content:"";border:6px solid transparent;border-top:8px solid var(--line);border-bottom:0}
+.arrow i{position:absolute;left:14px;top:4px;font-style:normal;font-size:11px;white-space:nowrap;color:var(--muted)}
+/* wizard */
+.q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.q h3{margin:0 0 12px;font-size:17px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:12px 14px;border-radius:10px;cursor:pointer;font:inherit}
+.opt:hover{border-color:var(--accent)}
+.opt small{display:block;color:var(--muted);margin-top:2px}
+.picked{border:1px solid var(--line);border-radius:10px;padding:8px 14px;color:var(--muted);background:var(--panel2);font-size:14px;align-self:center}
+.picked b{color:var(--text)}
+.leaf{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:18px}
+.leaf h3{margin:0 0 4px;font-size:18px;color:var(--accent)}
+.leaf p{margin:6px 0}
+.leaf .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-top:12px}
+.reset{margin-top:14px}
+/* beginner layer */
+.plain{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.plain b{color:var(--accent)}
+.what{margin:4px 0 6px;font-size:13.5px}
+.links{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.links a{font-size:12.5px;padding:2px 10px;border-radius:999px;border:1px solid var(--line);color:var(--accent);text-decoration:none;background:var(--panel2)}
+.links a:hover{border-color:var(--accent)}
+.badge{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--p-si);color:#04121a;font-weight:700;margin-left:6px;vertical-align:middle}
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:22px}
+.hero h2{margin:0 0 8px;font-size:22px}
+.hero p{margin:6px 0;max-width:720px}
+.mini{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px}
+.mini span.s{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13.5px}
+.mini span.a{color:var(--muted)}
+h2.sec{font-size:19px;margin:30px 0 4px}
+.secsub{color:var(--muted);margin:0 0 12px;font-size:14px}
+.road{position:relative;margin-left:14px;padding-left:26px;border-left:2px solid var(--line)}
+.step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.step::before{content:attr(data-n);position:absolute;left:-43px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#04121a;font-weight:700;font-size:13px;display:grid;place-items:center}
+.step h3{margin:0 0 4px;font-size:16px}
+.step p{margin:4px 0;font-size:14px}
+.step .out{color:var(--open);font-size:13.5px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.gloss div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px}
+.gloss b{color:var(--accent)}
+.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px}
+.guide div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.guide b{display:block;margin-bottom:2px}
+.search{position:relative;margin-top:20px;max-width:640px}
+#q{width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit}
+#q:focus{outline:2px solid var(--accent);border-color:transparent}
+#results{position:absolute;z-index:10;left:0;right:0;top:calc(100% + 6px);max-height:380px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.res{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--text);padding:10px 14px;cursor:pointer;font:inherit}
+.res:last-child{border:0}
+.res:hover,.res:focus{background:var(--panel2);outline:none}
+.res b{font-size:14.5px}
+.res small{display:block;color:var(--muted)}
+.res mark{background:color-mix(in srgb,var(--accent) 35%,transparent);color:inherit;border-radius:3px}
+.none{padding:14px;color:var(--muted)}
+.diagram-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+#dsvg{width:100%;height:auto;display:block;min-width:560px}
+.dbox{cursor:pointer;outline:none}
+.dbox .bg{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .15s}
+.dbox:hover .bg,.dbox:focus-visible .bg{stroke:var(--accent)}
+.dbox.sel .bg{stroke:var(--accent);stroke-width:2.5}
+.dbox text{fill:var(--text);font:600 13.5px system-ui,sans-serif}
+.dbox .sm{fill:var(--muted);font:400 11.5px system-ui,sans-serif}
+.dbox .nm{fill:#04121a;font:700 12px system-ui,sans-serif}
+.dbox .lb{fill:var(--bad);font:600 11px system-ui,sans-serif}
+.dpanel{margin-top:14px;border-left-color:var(--accent)}
+.dpanel .detail{display:block}
+footer{color:var(--muted);font-size:12.5px;margin-top:40px}
+
+/* ===== Fun & simple theme (overrides everything above) ===== */
+:root{
+  --bg:#fff7e6;--panel:#ffffff;--panel2:#fff1cf;--line:#eadfc6;--ink:#241c3a;--text:#241c3a;--muted:#6d6585;
+  --accent:#5b4bdb;--open:#13854d;--comm:#c2410c;--bad:#e03131;
+  --p-front:#4dabf7;--p-back:#b197fc;--p-sign:#ffc53d;--p-si:#51cf66;
+  --pop:3px 3px 0 var(--ink);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font:17px/1.55 Nunito,ui-rounded,system-ui,sans-serif;
+  background-image:radial-gradient(#f1e2bd 1.2px,transparent 1.2px);background-size:22px 22px}
+h1,h2,h3,.phase{font-family:Fredoka,Nunito,ui-rounded,system-ui,sans-serif}
+header{padding-top:32px}
+h1{font-size:clamp(30px,6vw,46px);font-weight:700;color:var(--ink)}
+h1 span{color:var(--accent)}
+h1 .logo{display:inline-block;transform:rotate(-8deg)}
+.sub{font-size:19px;color:var(--muted)}
+.wrap{max-width:900px}
+
+/* chunky buttons */
+.tab,.chip,.opt,.res{font-family:inherit}
+.tab,.chip{border:2.5px solid var(--ink);background:#fff;color:var(--ink);font-weight:800;font-size:15px;padding:9px 16px;box-shadow:2px 2px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+.tab:hover,.chip:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.tab:active,.chip:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+.tab[aria-selected=true]{background:var(--accent);color:#fff;border-color:var(--ink)}
+.chip[aria-pressed=true]{background:#ffe27a;color:var(--ink);border-color:var(--ink)}
+.tabs{gap:10px;margin-top:18px}
+
+/* search */
+#q{border:2.5px solid var(--ink);border-radius:999px;padding:13px 20px;font-size:16px;box-shadow:var(--pop);background:#fff;color:var(--ink)}
+#q:focus{outline:3px solid #ffe27a;border-color:var(--ink)}
+#results{border:2.5px solid var(--ink);box-shadow:var(--pop);border-radius:18px}
+.res{border-bottom:1px solid var(--line)}
+.res:hover,.res:focus{background:#fff1cf}
+
+/* cards */
+.node,.q,.leaf,.hero,.step,.diagram-box,.gloss div,.guide div,.opt{border:2.5px solid var(--ink)!important;box-shadow:var(--pop);border-radius:18px}
+.node{border-left-width:2.5px;background:color-mix(in srgb,var(--pc,#fff) 16%,#fff)}
+.node:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.node-head h3,.step h3{font-size:19px;font-weight:600}
+.num{border:2.5px solid var(--ink);width:34px;height:34px;color:var(--ink);font-weight:800}
+.pills,.legend{display:none}
+.phase{font-size:17px;letter-spacing:0;text-transform:none;font-weight:700;color:var(--ink)!important;margin:30px 0 12px}
+.phase::after{height:3px;border-radius:3px;background:var(--ink);opacity:.15}
+.arrow::before{width:3px;border-radius:2px;background:var(--ink);opacity:.35}
+.arrow::after{border-top-color:#8a8097}
+.detail{border-top:2px dashed var(--line)}
+.tool{border-bottom:2px dotted var(--line)}
+.plain{background:#fff;border:2px dashed var(--accent);color:var(--ink);font-size:15.5px;border-radius:14px}
+.plain b{color:var(--accent)}
+.what{font-size:15px}
+.links a{border:2px solid var(--ink);color:var(--ink);background:#fff;font-weight:700;font-size:13px;padding:3px 11px}
+.links a:hover{background:#ffe27a}
+.badge{background:#51cf66;color:var(--ink);border:1.5px solid var(--ink)}
+.pill{background:#fff}
+.fail{font-weight:700}
+
+/* start page */
+.hero{background:#fff;padding:26px;position:relative}
+.hero h2{font-size:28px;font-weight:700}
+.mini span.s{background:#fff1cf;border:2px solid var(--ink);border-radius:999px;font-weight:700}
+h2.sec{font-size:24px;font-weight:700;margin-top:38px}
+.secsub{font-size:15.5px}
+.road{border-left:4px dotted var(--ink);margin-left:16px;padding-left:30px}
+.step{background:#fff}
+.step::before{background:var(--accent);color:#fff;border:2.5px solid var(--ink);left:-49px;width:34px;height:34px;font-size:15px}
+.step .out{color:var(--open);font-weight:700}
+.gloss div,.guide div{background:#fff}
+.guide div{background:#fff1cf}
+.gloss b{color:var(--accent)}
+
+/* chooser */
+.q,.leaf{background:#fff}
+.q h3{font-size:22px}
+.opt{background:#fff1cf;font-weight:700;box-shadow:2px 2px 0 var(--ink);padding:14px 16px;transition:transform .12s}
+.opt:hover{transform:translate(-1px,-1px) rotate(-.5deg);background:#ffe27a}
+.opt small{font-weight:400;color:var(--muted)}
+.picked{background:#fff;border:2px solid var(--ink);color:var(--ink)}
+.leaf{border-color:var(--ink)!important;background:#e8fbe9}
+.leaf h3{color:var(--ink);font-size:24px}
+
+/* diagram */
+.hint{font-size:15px;color:var(--muted);margin:2px 0 12px}
+.diagram-box{background:#fff;padding:14px}
+.dbox .bg{stroke:var(--ink);stroke-width:2.5}
+.dbox:hover .bg{stroke:var(--accent)}
+.dbox.sel .bg{stroke:var(--accent);stroke-width:5}
+.dbox text{fill:var(--ink);font-family:Nunito,ui-rounded,system-ui,sans-serif;font-weight:800;font-size:14.5px}
+.dbox .nm{fill:var(--ink)}
+.dbox .sm{display:none}
+.dbox .lb{fill:var(--bad)}
+.dbox circle{stroke:var(--ink);stroke-width:2}
+#dsvg path[marker-end]{stroke-width:3}
+.dpanel{border-color:var(--ink)}
+footer{font-size:13px}
+
+/* ---- cleaner expanded step ---- */
+.detail .grid{display:flex;flex-direction:column;gap:16px}
+.io{order:-1;display:flex;gap:10px;flex-wrap:wrap}
+.io h4{display:none}
+.io>div{flex:1 1 220px;margin:0!important;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:8px 12px;font-size:14.5px}
+.io>div:nth-of-type(1)::before{content:"⬇️ ";}
+.io>div:nth-of-type(2)::before{content:"⬆️ ";}
+.io>.fail{flex-basis:100%}
+.fail{background:#ffe3e3;border:2px solid var(--bad);border-radius:12px;padding:8px 12px;color:#9c1c1c;font-size:14.5px}
+.tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.tl>h4,.tl>.plain{grid-column:1/-1;margin:0}
+.tl>h4{font-size:14px;color:var(--ink);letter-spacing:0;text-transform:none;font-family:Fredoka,Nunito,sans-serif}
+.plain{margin:0}
+.tcard{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:12px 14px;box-shadow:2px 2px 0 var(--ink);display:flex;flex-direction:column;gap:2px}
+.thead{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.thead b{font-size:16px;margin-right:2px}
+.tag{font-size:11.5px;font-weight:800;padding:1px 9px;border-radius:999px;border:1.5px solid var(--ink)}
+.tag.open{background:#b8f2c8}
+.tag.comm{background:#ffd8a8}
+.tag.web{background:#a5d8ff}
+.twhen{margin:4px 0 0;font-weight:700;font-size:14.5px}
+.twhat{margin:0;color:var(--muted);font-size:14.5px}
+.twhat b{color:var(--ink)}
+.tcard .links{margin-top:8px}
+.tcard .links a{font-size:12.5px;padding:2px 10px;box-shadow:none}
+
+/* ---- dashboard layout ---- */
+.app{display:flex;min-height:100vh;align-items:flex-start}
+.side{width:260px;flex:none;position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px;background:#fff;border-right:3px solid var(--ink);display:flex;flex-direction:column;gap:4px;z-index:30}
+.brand{font:700 26px Fredoka,Nunito,sans-serif;color:var(--ink);line-height:1.1}
+.brand span:not(.logo){color:var(--accent)}
+.brand .logo{display:inline-block;transform:rotate(-8deg)}
+.brand-sub{margin:6px 0 16px;color:var(--muted);font-size:14px;line-height:1.4}
+.side .tabs{display:flex;flex-direction:column;gap:8px;margin:0}
+.side .tab{width:100%;text-align:left;border-radius:14px;padding:11px 14px;font-size:15.5px}
+.side-label{font:700 12px Nunito,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 4px 8px}
+#trackBtns{display:flex;flex-direction:column;gap:8px}
+#trackBtns .chip{text-align:left;border-radius:14px;width:100%}
+.side-tip{margin-top:auto;padding:12px 14px;background:#fff1cf;border:2px dashed var(--ink);border-radius:14px;font-size:13.5px}
+.main{flex:1;min-width:0;max-width:980px;padding:22px 32px 80px}
+.topbar{display:flex;gap:10px;align-items:center;margin-bottom:24px}
+.topbar .search{flex:1;margin:0;max-width:none}
+#menu{display:none;padding:10px 14px}
+.goalgrid,.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.goalcard,.tile{display:flex;flex-direction:column;gap:4px;text-align:left;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px;cursor:pointer;font:inherit;color:var(--ink);transition:transform .12s,box-shadow .12s}
+.goalcard:hover,.tile:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.goalcard[aria-pressed=true]{background:#ffe27a;box-shadow:5px 5px 0 var(--accent)}
+.goalcard .gi,.tile span{font-size:30px;line-height:1.1}
+.goalcard b,.tile b{font:600 19px Fredoka,Nunito,sans-serif}
+.goalcard small,.tile small{color:var(--muted);font-size:14px;font-weight:400}
+.goalcard[aria-pressed=true] small{color:var(--ink)}
+.goalcard em{font-style:normal;font-weight:800;font-size:13px;color:var(--accent);margin-top:4px}
+.tile{background:#fff1cf}
+.tiles{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.hero{margin-bottom:6px}
+@media(max-width:860px){
+  .side{position:fixed;left:0;top:0;transform:translateX(-105%);transition:transform .2s;width:270px;box-shadow:8px 0 0 rgba(36,28,58,.25)}
+  .side.open{transform:none}
+  #menu{display:inline-flex}
+  .main{padding:16px 14px 70px}
+}
+
+/* ---- sidebar labels, collapse, progress ---- */
+.side-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#collapse{padding:4px 10px;font-size:16px;box-shadow:2px 2px 0 var(--ink);flex:none}
+.side .tab{display:flex;align-items:center;gap:12px}
+.tab .ti{font-size:22px;flex:none}
+.tab .tt{display:flex;flex-direction:column;line-height:1.2}
+.tab .tt b{font-size:15.5px}
+.tab .tt small{font-weight:600;font-size:12px;opacity:.7}
+.tab[aria-selected=true] .tt small{opacity:.9}
+@media(min-width:861px){
+  .app.collapsed .side{width:84px;padding:18px 10px;align-items:center}
+  .app.collapsed .side-top{flex-direction:column;gap:10px}
+  .app.collapsed .brand-text,.app.collapsed .brand-sub,.app.collapsed #tracks,.app.collapsed .side-tip,.app.collapsed .tab .tt{display:none}
+  .app.collapsed .side .tab{justify-content:center;padding:10px 0;width:52px}
+}
+@media(max-width:860px){#collapse{display:none}}
+
+/* ---- 3D FPGA board ---- */
+.banner{display:block;width:100%;text-align:left;margin:0 0 16px;padding:12px 16px;font:inherit;font-weight:800;color:var(--ink);background:#a5d8ff;border:2.5px solid var(--ink);border-radius:16px;box-shadow:var(--pop);cursor:pointer}
+.banner:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.stage{position:relative;height:440px;margin-top:6px;border:2.5px solid var(--ink);border-radius:20px;box-shadow:var(--pop);overflow:hidden;perspective:1300px;perspective-origin:50% 35%;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;background:radial-gradient(circle at 50% 30%,#fffdf6 0%,#ffeec2 70%,#ffe3a3 100%)}
+.stage.grab{cursor:grabbing}
+.board3d{position:absolute;left:50%;top:48%;width:400px;height:260px;margin:-130px 0 0 -200px;transform-style:preserve-3d}
+.cub{position:absolute;transform-style:preserve-3d;cursor:pointer}
+.cub .f{position:absolute;left:0;top:0;width:100%;height:100%;display:block;font-style:normal;background:var(--c)}
+.cub .f.s{background:color-mix(in srgb,var(--c) 68%,#000)}
+.cub .f.top{display:grid;place-items:center;color:#fff;font-family:Fredoka,Nunito,sans-serif;font-weight:700;letter-spacing:1px;line-height:1;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+.cub[data-part=osc] .f.top,.cub[data-part=usb] .f.top{color:#2b2f3a;text-shadow:none}
+.cub.pcb .f.top{background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:20px 20px}
+.cub.pins .f.top{background-image:radial-gradient(circle,#f5c542 2.2px,transparent 2.8px);background-size:10px 7px;background-position:5px 0}
+.cub:hover .f.top{background-color:color-mix(in srgb,var(--c) 78%,#fff)}
+.cub.sel .f{box-shadow:inset 0 0 0 4px #ffd43b}
+.cub.sel .f.top{background-color:color-mix(in srgb,var(--c) 62%,#ffd43b)}
+.bshadow{position:absolute;inset:-6px;background:rgba(36,28,58,.35);filter:blur(12px);transform:translateZ(-18px);pointer-events:none}
+.hint3d{position:absolute;left:14px;top:12px;z-index:5;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font-weight:800;font-size:13.5px;pointer-events:none}
+.hovername{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);z-index:5;background:var(--ink);color:#fff;border-radius:999px;padding:6px 16px;font-size:15px;white-space:nowrap;pointer-events:none;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.stagebtns{position:absolute;left:0;right:0;bottom:10px;z-index:6;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 8px}
+.stagebtns .chip{padding:6px 12px;font-size:14px;cursor:pointer}
+.binfo{display:flex;gap:16px;align-items:flex-start;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px 18px;margin-top:16px}
+.binfo .bi{font-size:44px;line-height:1}
+.binfo h3{margin:0 0 4px;font-size:22px}
+.binfo p{margin:4px 0}
+.binfo .like{color:var(--accent);font-weight:700}
+.pchips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 10px}
+@media(max-width:560px){.stage{height:380px}.hint3d{font-size:12px}}
+
+.boardlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:6px}
+.rb{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.rb p{margin:2px 0;font-size:14.5px}
+.rbh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rbh b{font:600 19px Fredoka,Nunito,sans-serif}
+.rbchip{color:var(--muted);font-weight:700}
+.rbtools{color:var(--muted)}
+.rb .links{margin-top:8px}
+
+/* ---- try a program ---- */
+.tryit{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px}
+.tintro{margin:8px 0 2px;font-weight:700}
+.thint{margin:0 0 8px;color:var(--accent);font-weight:800;font-size:14.5px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-top:8px}
+.ch{font:600 16px Fredoka,Nunito,sans-serif;margin:0 0 6px}
+.fine{color:var(--muted);font-size:12.5px;font-weight:600;margin:6px 0 0}
+.codebox pre{margin:0;background:#241c3a;color:#e9e4ff;border-radius:14px;padding:12px 0;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
+.ln{display:block;padding:0 14px;white-space:pre;border-left:4px solid transparent}
+.ln.hot{background:rgba(255,212,59,.22);border-left-color:#ffd43b}
+.kw{color:#7dd3fc}.cm{color:#a3a3b8;font-style:italic}
+.reactbox{background:#fff7e6;border:2px solid var(--ink);border-radius:14px;padding:12px}
+.ledrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ldw{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ldw small{font-size:11px;font-weight:700;color:var(--muted)}
+.ld{display:block;width:24px;height:24px;border-radius:50%;border:2.5px solid var(--ink);transition:box-shadow .1s}
+.ld.l0{background:#5c2a2a}.ld.l1{background:#5c4d12}.ld.l2{background:#215238}.ld.l3{background:#23405e}
+.ld.l0.on{background:#ff3030;box-shadow:0 0 12px 4px #ff3030}.ld.l1.on{background:#ffd21f;box-shadow:0 0 12px 4px #ffd21f}
+.ld.l2.on{background:#35ff7a;box-shadow:0 0 12px 4px #35ff7a}.ld.l3.on{background:#59b8ff;box-shadow:0 0 12px 4px #59b8ff}
+.pb{padding:6px 14px;font-size:14px;cursor:pointer}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 6px;align-items:center}
+.ctrls .chip{cursor:pointer;padding:6px 12px;font-size:14px}
+#tspeed{font:inherit;font-weight:800;border:2.5px solid var(--ink);border-radius:999px;padding:6px 10px;background:#fff;color:var(--ink)}
+.clk{font-weight:800;color:var(--accent);min-height:22px}
+.irow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+.il{font-size:13px;color:var(--muted);font-weight:700;min-width:140px}
+.irow code{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 8px;font-weight:700}
+.bit{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:30px;height:36px;border:2px solid var(--ink);border-radius:8px;background:#fff;font-weight:800;margin-right:4px;line-height:1.1}
+.bit small{font-size:9px;font-weight:700;color:var(--muted)}
+.bit.on{background:#ffd43b}
+.say{margin-top:10px;background:#fff1cf;border:2px dashed var(--ink);border-radius:12px;padding:10px 12px;font-weight:700;font-size:14.5px}
+.wavesvg{width:100%;max-width:560px;display:block;background:#fff7e6;border:2px solid var(--ink);border-radius:12px;padding:4px}
+.wavesvg polyline{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round}
+.wavesvg polyline.wled{stroke:#5b4bdb}
+.wl{font:700 10px Nunito,sans-serif;fill:var(--muted)}
+.cub[data-part="fpga"].tick .f.top{background-color:#3b82f6}
+.cub.on .f{box-shadow:0 0 12px 4px var(--c)}
+
+/* ---- footer contact ---- */
+footer{margin-top:48px}
+.contact{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px 20px}
+.who{display:flex;align-items:center;gap:12px}
+.who .wave{font-size:32px}
+.who b{display:block;font:600 19px Fredoka,Nunito,sans-serif;color:var(--ink)}
+.who small{color:var(--muted);font-size:14px}
+.contact .links{margin:0}
+.contact .links a{font-size:14px;padding:6px 14px}
+.fineprint{margin:14px 4px 0;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side" id="side">
+  <div class="side-top">
+    <div class="brand"><span class="logo">🧩</span><span class="brand-text"> Chip Flow <span>Atlas</span></span></div>
+    <button class="chip" id="collapse" aria-label="Collapse sidebar" title="Collapse / expand sidebar">«</button>
+  </div>
+  <p class="brand-sub">Learn how chips are made, one small step at a time.</p>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-view="start" aria-selected="true" title="Start here"><span class="ti">🚀</span><span class="tt"><b>Start here</b><small>Pick a goal, get a path</small></span></button>
+    <button class="tab" role="tab" data-view="flow" aria-selected="false" title="Steps"><span class="ti">📋</span><span class="tt"><b>Steps</b><small>The full chip journey</small></span></button>
+    <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>Boxes and arrows</small></span></button>
+    <button class="tab" role="tab" data-view="board" aria-selected="false" title="3D FPGA board"><span class="ti">🧊</span><span class="tt"><b>3D FPGA board</b><small>Spin it, run code</small></span></button>
+    <button class="tab" role="tab" data-view="pick" aria-selected="false" title="Help me choose"><span class="ti">🤔</span><span class="tt"><b>Help me choose</b><small>Find the right tool</small></span></button>
+    <button class="tab" role="tab" data-view="words" aria-selected="false" title="Words explained"><span class="ti">📖</span><span class="tt"><b>Words explained</b><small>Plain-English glossary</small></span></button>
+  </nav>
+  <div id="tracks">
+    <div class="side-label">Type of chip</div>
+    <div id="trackBtns"></div>
+  </div>
+  <div class="side-tip">💡 <b>New here?</b> Click <b>Start here</b>, pick a goal, and follow the numbered path.</div>
+</aside>
+<main class="main">
+<div class="topbar">
+  <button class="chip" id="menu" aria-label="Open menu">☰</button>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search any tool — e.g. Yosys, Calibre, oscilloscope…" autocomplete="off" aria-label="Search tools">
+    <div id="results" hidden></div>
+  </div>
+</div>
+
+<section id="v-start"></section>
+<section id="v-words" hidden></section>
+<section id="v-board" hidden></section>
+
+<section id="v-diagram" hidden>
+  <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
+  <div class="diagram-box"><svg id="dsvg" role="img" aria-label="Chip design flow diagram"></svg></div>
+  <div class="node dpanel" id="dpanel" style="cursor:default"></div>
+</section>
+
+<section id="v-flow">
+  <button class="banner" id="fpgaBanner" hidden>🧊 Want to see a real FPGA board? Open the 3D board, tap its parts and run sample code →</button>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--open)"></i>open-source</span>
+    <span><i class="dot" style="background:var(--comm)"></i>commercial</span>
+    <span><i class="dot" style="background:var(--bad)"></i>failure loop-back</span>
+    <button class="chip" id="toggleAll">Expand all</button>
+  </div>
+  <div class="flow" id="flow"></div>
+</section>
+
+<section id="v-pick" hidden>
+  <div class="flow" id="wiz"></div>
+</section>
+
+<footer>
+  <div class="contact">
+    <div class="who"><span class="wave">👋</span><div><b>Made by PRATHIK AMTE</b><small>Questions, ideas or fixes? Get in touch.</small></div></div>
+    <div class="links">
+      <a href="mailto:prathikamte@gmail.com">✉️ prathikamte@gmail.com</a>
+      <a href="https://www.linkedin.com/in/prathik-amte-313367296/" target="_blank" rel="noopener">💼 LinkedIn</a>
+    </div>
+  </div>
+  <p class="fineprint">Tool names are examples of common choices, not an exhaustive or ranked list. Commercial EDA licenses and foundry PDKs vary by company and process node.</p>
+</footer>
+</main>
+</div>
+
+<script>
+const PH = {front:["✏️ Part 1 · Design it","--p-front"], back:["🧱 Part 2 · Build the layout","--p-back"], sign:["✅ Part 3 · Check it","--p-sign"], si:["🏭 Part 4 · Make it real","--p-si"]};
+const O=(n,note)=>({n,t:'open',note}), C=(n,note)=>({n,t:'comm',note});
+
+const TRACKS = {
+ASIC:{label:"Digital ASIC", stages:[
+ {ph:'front',t:"Spec & architecture",one:"Decide what the chip does and how fast, how big, how much power.",
+  tools:[O("Python / C++ models","Quick algorithm and performance models before any hardware exists"),O("SystemC / gem5","Cycle-approximate system and CPU models"),C("MATLAB / Simulink","DSP and control algorithm exploration")],
+  inp:"Product requirements, market targets",out:"Block diagram, micro-architecture doc, PPA targets"},
+ {ph:'front',t:"RTL design",one:"Describe the hardware in code, register by register.",
+  tools:[O("Verilog / SystemVerilog","Mainstream RTL languages"),O("VHDL","Common in aerospace, defense, Europe"),O("Chisel / SpinalHDL","Generate RTL from Scala for parametrized designs"),O("Verible","Formatter and style linter for SystemVerilog")],
+  inp:"Micro-architecture doc",out:"Synthesizable RTL (.v / .sv / .vhd)"},
+ {ph:'front',t:"Lint & CDC check",one:"Cheap static checks before you spend hours simulating.",
+  tools:[O("Verilator --lint-only","Width mismatches, latches, unused signals"),C("Synopsys SpyGlass","Lint plus clock-domain-crossing, reset, power checks"),C("Siemens Questa CDC","Finds unsynchronized clock crossings")],
+  inp:"RTL",out:"Clean warnings report",fail:"Warnings or CDC violations → back to RTL design"},
+ {ph:'front',t:"Functional verification",one:"Prove with simulation that the RTL does what the spec says.",
+  tools:[O("Icarus Verilog / Verilator","Fast, free simulators for small and medium blocks"),O("cocotb","Write testbenches in Python"),O("GTKWave / Surfer","View waveforms to debug"),C("Synopsys VCS · Cadence Xcelium · Siemens Questa","Industry simulators for UVM testbenches and coverage closure")],
+  inp:"RTL + testbench",out:"Pass/fail, functional coverage",fail:"Bug found → fix RTL, re-run lint and sim (this loop runs for months)"},
+ {ph:'front',t:"Formal verification",one:"Mathematically prove properties for every possible input.",
+  tools:[O("SymbiYosys","Open formal property checking"),C("Cadence JasperGold · Synopsys VC Formal","Property checking, X-propagation, deadlock proofs"),C("Synopsys Formality · Cadence Conformal","Equivalence checking: RTL vs netlist after synthesis")],
+  inp:"RTL + assertions (SVA)",out:"Proven / counter-example",fail:"Counter-example → debug waveform, fix RTL"},
+ {ph:'front',t:"Logic synthesis",one:"Turn RTL into a netlist of real standard cells.",
+  tools:[O("Yosys + ABC","Open synthesis, used in OpenLane / OpenROAD flows"),C("Synopsys Design Compiler","Long-time industry standard"),C("Cadence Genus","Competing commercial synthesis")],
+  inp:"RTL, timing constraints (SDC), cell library (.lib)",out:"Gate-level netlist",fail:"Timing or area misses → relax/adjust constraints or restructure RTL"},
+ {ph:'front',t:"Design for test (DFT)",one:"Add scan chains and BIST so manufactured chips can be tested.",
+  tools:[C("Siemens Tessent","Scan insertion, ATPG, memory BIST"),C("Synopsys DFT Compiler / TestMAX","Scan and ATPG"),O("Fault (open-source DFT)","Academic scan/ATPG flow")],
+  inp:"Netlist",out:"Scan-inserted netlist + test patterns"},
+ {ph:'back',t:"Floorplan & power grid",one:"Decide where blocks, memories, I/O and power rails go.",
+  tools:[O("OpenROAD","Open floorplan + P&R engine"),C("Cadence Innovus","Industry P&R"),C("Synopsys IC Compiler II","Industry P&R")],
+  inp:"Netlist, LEF/tech files",out:"Die outline, macro placement, power grid"},
+ {ph:'back',t:"Placement & clock tree",one:"Place every cell, then build a balanced clock network.",
+  tools:[O("OpenROAD (RePlAce, TritonCTS)","Global placement, CTS"),C("Innovus / ICC2","Timing-driven placement, useful-skew CTS")],
+  inp:"Floorplan",out:"Placed, clocked design",fail:"Congestion or timing hot spots → redo floorplan"},
+ {ph:'back',t:"Routing",one:"Draw all the metal wires that connect the cells.",
+  tools:[O("OpenROAD (TritonRoute)","Detailed routing"),C("Innovus NanoRoute · ICC2","Production routing")],
+  inp:"Placed design",out:"Fully routed layout (DEF)"},
+ {ph:'sign',t:"Timing, power & IR sign-off",one:"Check every path, corner and power drop using extracted wire parasitics.",
+  tools:[O("OpenSTA / OpenRCX","Static timing and parasitic extraction"),C("Synopsys PrimeTime · StarRC","Gold-standard timing sign-off"),C("Cadence Tempus · Quantus","Timing + extraction"),C("Ansys RedHawk · Cadence Voltus","IR drop, electromigration, power")],
+  inp:"Routed layout + SPEF parasitics",out:"Timing/power reports",fail:"Setup/hold violations → ECO fixes, back to routing"},
+ {ph:'sign',t:"Physical verification",one:"DRC: does the layout obey foundry rules? LVS: does it match the netlist?",
+  tools:[O("Magic · KLayout · Netgen","Open DRC, layout viewing, LVS"),C("Siemens Calibre","Foundry-standard DRC/LVS"),C("Synopsys IC Validator · Cadence Pegasus","Alternative sign-off decks")],
+  inp:"GDSII layout, foundry rule decks",out:"Clean DRC/LVS/antenna",fail:"Violations → fix layout, rerun routing and sign-off"},
+ {ph:'si',t:"Tape-out & fabrication",one:"Send the final GDSII to the foundry. Masks cost millions at advanced nodes.",
+  tools:[O("KLayout","Final visual check of GDSII/OASIS"),O("Tiny Tapeout · MPW shuttles","Low-cost multi-project wafers for learning")],
+  inp:"Signed-off GDSII",out:"Wafers, then packaged chips"},
+ {ph:'si',t:"Post-silicon bring-up",one:"Power on the real chip and find out what the simulations missed.",
+  tools:[C("Oscilloscope · logic analyzer","See real signals on the bench"),C("JTAG debugger","Read internal registers, run firmware"),C("ATE (automatic test equipment)","Production test with the DFT patterns"),C("Probe station","Wafer-level probing")],
+  inp:"Packaged chips, test board",out:"Characterization, yield data",fail:"Silicon bug → metal-fix ECO or new revision (re-spin)"}
+]},
+FPGA:{label:"FPGA", stages:[
+ {ph:'front',t:"Spec & architecture",one:"Pick the device and sketch the data path.",
+  tools:[O("Python / C++ models","Golden reference model"),C("Vendor part selectors","Check LUTs, DSPs, block RAM, I/O fit")],inp:"Requirements",out:"Block diagram, chosen FPGA"},
+ {ph:'front',t:"RTL design",one:"Write Verilog / VHDL, or generate it from higher level tools.",
+  tools:[O("Verilog / SystemVerilog / VHDL","Standard HDLs"),O("Amaranth / Migen / Chisel","Python/Scala-based HDLs"),C("Vitis HLS","C/C++ to RTL")],inp:"Block diagram",out:"RTL"},
+ {ph:'front',t:"Simulation",one:"Check behaviour on a PC before touching the board.",
+  tools:[O("Icarus / Verilator + cocotb","Free sim and Python testbenches"),O("GTKWave","Waveforms"),C("Vivado Simulator · ModelSim","Vendor-integrated sim")],inp:"RTL + testbench",out:"Waveforms, pass/fail",fail:"Mismatch → fix RTL"},
+ {ph:'back',t:"Synthesis",one:"Map RTL onto LUTs, flip-flops, DSPs and block RAM.",
+  tools:[O("Yosys","Open synthesis for Lattice, Xilinx 7-series, Gowin"),C("AMD Vivado","Xilinx/AMD devices"),C("Intel Quartus","Intel/Altera devices")],inp:"RTL, constraints",out:"Mapped netlist"},
+ {ph:'back',t:"Constraints & place-and-route",one:"Tell the tool your clock speed and pin locations; it places and routes.",
+  tools:[O("nextpnr","Open P&R"),C("Vivado Implementation (XDC)","Timing + pin constraints"),C("Quartus Fitter (SDC)","Timing + pin constraints")],inp:"Netlist, XDC/SDC",out:"Routed design",fail:"Timing not met → pipeline logic, relax constraints"},
+ {ph:'sign',t:"Timing analysis",one:"Confirm every path meets the clock period.",
+  tools:[C("Vivado Timing Report","Worst negative slack, critical paths"),C("Quartus TimeQuest","Timing analyzer"),O("nextpnr timing report","Open equivalent")],inp:"Routed design",out:"Timing closed (WNS ≥ 0)",fail:"Violations → back to RTL/constraints"},
+ {ph:'si',t:"Bitstream & programming",one:"Generate the config file and load it onto the board.",
+  tools:[O("openFPGALoader","Program many boards from CLI"),C("Vivado Hardware Manager · Quartus Programmer","Vendor loaders")],inp:"Routed design",out:"Bitstream running on FPGA"},
+ {ph:'si',t:"On-board debug",one:"See real internal signals while the design runs.",
+  tools:[C("Vivado ILA · Quartus SignalTap","Embedded logic analyzer inside the FPGA"),C("External logic analyzer / oscilloscope","Pins and interfaces"),O("Sigrok / PulseView","Open logic-analyzer software")],inp:"Running board",out:"Debug insight",fail:"Bug → back to simulation with a new test"}
+]},
+Analog:{label:"Analog / mixed-signal", stages:[
+ {ph:'front',t:"Spec & topology",one:"Gain, bandwidth, noise, power — pick a circuit architecture.",
+  tools:[O("Python / Octave","Hand-calc and sizing scripts"),C("MATLAB","System-level modelling")],inp:"Requirements",out:"Topology + target specs"},
+ {ph:'front',t:"Schematic capture",one:"Draw the transistor-level circuit.",
+  tools:[O("Xschem","Open schematic editor"),C("Cadence Virtuoso","Industry analog environment")],inp:"Topology",out:"Schematic + netlist"},
+ {ph:'front',t:"SPICE simulation",one:"DC, AC, transient and noise analysis; then corners and Monte Carlo.",
+  tools:[O("ngspice / Xyce","Open SPICE"),C("Cadence Spectre","Fast, accurate commercial simulator"),C("Synopsys HSPICE","Foundry-grade reference"),C("Monte Carlo + PVT corners","Check process, voltage, temperature spread")],inp:"Netlist + device models (PDK)",out:"Waveforms, spec table",fail:"Spec miss → resize transistors, edit schematic"},
+ {ph:'back',t:"Layout",one:"Draw the physical shapes — matching and symmetry matter.",
+  tools:[O("Magic · KLayout","Open layout editors"),C("Virtuoso Layout Suite","Industry analog layout")],inp:"Schematic",out:"GDSII layout"},
+ {ph:'sign',t:"DRC / LVS",one:"Foundry rules and schematic-vs-layout match.",
+  tools:[O("Magic DRC · Netgen LVS","Open sign-off"),C("Siemens Calibre","Foundry standard")],inp:"Layout + rule decks",out:"Clean DRC/LVS",fail:"Errors → fix layout"},
+ {ph:'sign',t:"Parasitic extraction & post-layout sim",one:"Re-simulate including real wire resistance/capacitance.",
+  tools:[O("Magic extract","Open parasitic extraction"),C("Calibre xRC · StarRC · Quantus","Commercial PEX"),C("Spectre / HSPICE","Run the sim on extracted netlist")],inp:"Layout",out:"Post-layout results",fail:"Performance drop → modify layout/sizing"},
+ {ph:'si',t:"Tape-out & lab bring-up",one:"Fabricate, then measure the real chip.",
+  tools:[C("Oscilloscope","Transient waveforms"),C("Source-measure unit (SMU)","Precise I-V curves"),C("Spectrum analyzer","Noise, spurs, RF"),C("Probe station","Wafer-level measurement")],inp:"Fabricated die",out:"Measured vs simulated"}
+]}};
+
+/* ---------- Beginner layer: what each tool is, where to get it, where to learn it ---------- */
+const HDLBITS=["Practice in your browser: HDLBits","https://hdlbits.01xz.net"];
+const INFO=[
+ {re:/^Verilog \/|VHDL/i,name:"Verilog / VHDL",plain:"Languages for describing a circuit as text. Unlike normal programming, every line runs at the same time — you're describing wires and gates, not a to-do list.",learn:[HDLBITS,["Nandland tutorials","https://nandland.com"]],browser:true},
+ {re:/icarus/i,name:"Icarus Verilog",plain:"A free program that runs your Verilog on your computer and checks it behaves correctly — a flight simulator for circuits.",site:"https://steveicarus.github.io/iverilog/",learn:[["Try it in a browser first: EDA Playground","https://www.edaplayground.com"]]},
+ {re:/verilator/i,name:"Verilator",plain:"Converts Verilog into very fast C++ so big designs simulate quickly. Also has a built-in checker that spots common mistakes.",site:"https://www.veripool.org/verilator/",learn:[["Official guide","https://verilator.org/guide/latest/"]]},
+ {re:/cocotb/i,name:"cocotb",plain:"Lets you write your tests in Python instead of Verilog, then runs them on a simulator. Great if you already know Python.",site:"https://www.cocotb.org",learn:[["Docs","https://docs.cocotb.org/en/stable/"]]},
+ {re:/gtkwave/i,name:"GTKWave",plain:"A waveform viewer: shows every signal going high and low over time so you can see exactly where your circuit went wrong.",site:"https://gtkwave.sourceforge.net"},
+ {re:/surfer/i,name:"Surfer",plain:"A modern waveform viewer (like GTKWave) that can even run in a web browser.",site:"https://surfer-project.org",browser:true},
+ {re:/\byosys/i,name:"Yosys",plain:"Reads your Verilog and works out which real logic gates and flip-flops would build it. That step is called synthesis.",site:"https://yosyshq.net/yosys/",learn:[["Yosys manual","https://yosyshq.readthedocs.io/projects/yosys/en/latest/"]]},
+ {re:/symbiyosys/i,name:"SymbiYosys",plain:"Proves your design is correct for every possible input using maths, instead of just testing a few examples.",site:"https://symbiyosys.readthedocs.io"},
+ {re:/openlane/i,name:"OpenLane",plain:"A ready-made recipe that runs synthesis, placement, routing and checks with one command. Verilog in, chip layout out — the best first ASIC flow.",site:"https://openlane2.readthedocs.io",learn:[["Free SkyWater chip process (PDK)","https://skywater-pdk.readthedocs.io"]]},
+ {re:/openroad/i,name:"OpenROAD",plain:"Free tool that turns a gate list into a physical chip layout: it places the cells and draws the wires between them.",site:"https://theopenroadproject.org",learn:[["Easiest way in: OpenLane","https://openlane2.readthedocs.io"]]},
+ {re:/opensta/i,name:"OpenSTA",plain:"Checks whether every signal arrives in time before the next clock tick (static timing analysis).",site:"https://github.com/The-OpenROAD-Project/OpenSTA"},
+ {re:/\bmagic\b/i,name:"Magic",plain:"A layout editor and checker: view and edit the shapes that become the real chip, and run design-rule checks.",site:"http://opencircuitdesign.com/magic/"},
+ {re:/klayout/i,name:"KLayout",plain:"A free viewer and editor for chip layout files (GDSII). The easiest way to actually look at your finished chip.",site:"https://www.klayout.de"},
+ {re:/netgen/i,name:"Netgen",plain:"Compares your layout against your design (LVS) to make sure the wiring really matches what you intended.",site:"http://opencircuitdesign.com/netgen/"},
+ {re:/xschem/i,name:"Xschem",plain:"Draw circuit schematics (transistors, resistors, capacitors) for analog design, then send them to a simulator.",site:"https://xschem.sourceforge.io/stefan/index.html"},
+ {re:/ngspice/i,name:"ngspice",plain:"Simulates real electronic circuits and plots voltages and currents over time. SPICE is the name of this whole family of simulators.",site:"https://ngspice.sourceforge.io",learn:[["Play with circuits in your browser: Falstad","https://www.falstad.com/circuit/"]]},
+ {re:/xyce/i,name:"Xyce",plain:"Another free SPICE circuit simulator, built for very large circuits.",site:"https://xyce.sandia.gov"},
+ {re:/nextpnr/i,name:"nextpnr",plain:"Decides which spots inside an FPGA each part of your design uses and how they are wired together (place-and-route).",site:"https://github.com/YosysHQ/nextpnr"},
+ {re:/openfpgaloader/i,name:"openFPGALoader",plain:"Command-line tool that copies your finished design onto an FPGA board.",site:"https://github.com/trabucayre/openFPGALoader"},
+ {re:/chisel/i,name:"Chisel",plain:"Write hardware using the Scala programming language; it generates Verilog for you. Good for building configurable designs.",site:"https://www.chisel-lang.org"},
+ {re:/spinalhdl/i,name:"SpinalHDL",plain:"Another Scala-based way to write hardware that generates Verilog or VHDL.",site:"https://spinalhdl.github.io/SpinalDoc-RTD/"},
+ {re:/amaranth/i,name:"Amaranth",plain:"Write hardware in Python, which generates Verilog. Friendly if you like Python.",site:"https://amaranth-lang.org"},
+ {re:/verible/i,name:"Verible",plain:"Auto-formats and style-checks SystemVerilog, like a spell-checker for your hardware code.",site:"https://github.com/chipsalliance/verible"},
+ {re:/systemc/i,name:"SystemC",plain:"A C++ library for building fast models of a whole chip before writing real hardware code.",site:"https://systemc.org"},
+ {re:/gem5/i,name:"gem5",plain:"Simulates a whole computer or CPU so you can measure performance before building anything.",site:"https://www.gem5.org"},
+ {re:/tiny tapeout/i,name:"Tiny Tapeout",plain:"A low-cost community programme where you submit a small design and get it made into a real chip — the easiest way to ever tape out.",site:"https://tinytapeout.com",learn:[["Zero to ASIC course","https://zerotoasiccourse.com"]]},
+ {re:/sigrok|pulseview/i,name:"Sigrok / PulseView",plain:"Free software that shows what a logic analyzer captures, and decodes protocols like SPI and I²C for you.",site:"https://sigrok.org"},
+ {re:/jtag/i,name:"JTAG debugger",plain:"A small connector plus software that lets you pause the chip and read what's happening inside it. OpenOCD is the free software side.",site:"https://openocd.org"},
+ {re:/logic analyzer/i,name:"Logic analyzer",plain:"Like an oscilloscope for many digital wires at once: shows the 1s and 0s over time and can decode protocols."},
+ {re:/oscilloscope/i,name:"Oscilloscope",plain:"Draws voltage against time so you can see the real electrical signal — edges, noise, ringing. The first instrument to buy or borrow."},
+ {re:/vivado/i,name:"Vivado",plain:"AMD/Xilinx's all-in-one FPGA program: synthesis, place-and-route, simulation and on-chip debug. A free edition covers many popular boards.",site:"https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html",install:true},
+ {re:/quartus/i,name:"Quartus",plain:"Intel's equivalent of Vivado for Intel/Altera FPGAs. A free 'Lite' edition exists for many boards.",site:"https://www.intel.com/content/www/us/en/products/details/fpga/development-tools/quartus-prime.html"},
+ {re:/python \/ c\+\+|python \/ octave/i,name:"Python / C++ models",plain:"Before any hardware exists, write a quick program that does the same job. It becomes the 'right answer' you compare your hardware against.",browser:true},
+ {re:/^fault/i,name:"Fault",plain:"An open-source research tool for adding test circuitry and generating test patterns."},
+ {re:/\bATE\b/,name:"ATE",plain:"A big factory machine that tests every manufactured chip, fast, using patterns made from your design."},
+ {re:/probe station/i,name:"Probe station",plain:"A microscope with tiny needles that touch a chip on the wafer so you can measure it before it is packaged."},
+ {re:/part selectors/i,name:"Part selector",plain:"A vendor web page or table to compare FPGA models by logic size, memory and pins, so you pick one that fits."},
+ {re:/vitis hls/i,name:"Vitis HLS",plain:"AMD tool that turns C/C++ code into hardware, so you can describe an algorithm instead of wiring it by hand."},
+ {re:/monte carlo/i,name:"Monte Carlo + corners",plain:"Run the same circuit simulation hundreds of times with random manufacturing variation, hot/cold and different supply voltages to see if it still works."},
+ {re:/source-measure|SMU/i,name:"Source-measure unit",plain:"A precise instrument that applies a voltage or current and measures the result, used to plot a device's characteristics."},
+ {re:/spectrum analyzer/i,name:"Spectrum analyzer",plain:"Shows which frequencies are present in a signal — used for noise, interference and radio circuits."},
+ {re:/VCS|Xcelium|Questa|Design Compiler|Genus|Innovus|IC Compiler|ICC2|PrimeTime|Calibre|JasperGold|SpyGlass|Virtuoso|Spectre|HSPICE|Tessent|Formality|Conformal|StarRC|Quantus|Tempus|Voltus|RedHawk|TestMAX|MATLAB|IC Validator|Pegasus/i,name:"Industry tool",plain:"Used inside chip companies and needs a paid licence (usually via a job or university). Learn the free tool for this step first — the ideas transfer."}
+];
+function infoFor(name){return INFO.filter(i=>i.re.test(name))}
+function toolHTML(t){
+  const inf=infoFor(t.n),multi=inf.length>1,links=[];
+  const browser=inf.some(i=>i.browser);
+  const what=inf.map(i=>{
+    const named=multi&&i.name!=="Industry tool";
+    if(i.site)links.push(`<a href="${i.site}" target="_blank" rel="noopener">↗ ${named?esc(i.name):"Website"}${i.install?" / download":""}</a>`);
+    (i.learn||[]).forEach(l=>links.push(`<a href="${l[1]}" target="_blank" rel="noopener">📖 ${l[0]}</a>`));
+    return `<p class="twhat">${named?`<b>${esc(i.name)}:</b> `:""}${i.plain}</p>`;
+  }).join("");
+  return `<div class="tcard">
+    <div class="thead"><b>${esc(t.n)}</b><span class="tag ${t.t}">${t.t==="open"?"Free":"Paid"}</span>${browser?'<span class="tag web">In browser</span>':""}</div>
+    <p class="twhen">${t.note}</p>${what}${links.length?`<div class="links">${links.join("")}</div>`:""}</div>`;
+}
+const STAGE_PLAIN={
+ "Spec & architecture":"Like sketching a floor plan before building a house: decide what the chip must do before writing any code.",
+ "Spec & topology":"Like choosing a recipe: decide what the circuit must do and which basic design to use.",
+ "RTL design":"Writing the chip's 'source code' in a hardware language. You describe registers and the logic between them.",
+ "Lint & CDC check":"Spell-check for hardware code. It spots mistakes without running anything.",
+ "Functional verification":"Testing. You feed the design inputs in a simulator and check the outputs. Most of the effort in real chip projects is here.",
+ "Simulation":"Run your design on your PC and watch the signals before you try it on real hardware.",
+ "Formal verification":"Instead of trying example inputs, a tool proves a rule holds for every input.",
+ "Logic synthesis":"A compiler for hardware: it turns your code into a list of real logic gates.",
+ "Synthesis":"A compiler for hardware: it turns your code into the building blocks inside the FPGA.",
+ "Design for test (DFT)":"Adding built-in test points so each manufactured chip can be checked for defects.",
+ "Floorplan & power grid":"Deciding where big blocks go and how power reaches every part — like planning rooms and wiring in a building.",
+ "Placement & clock tree":"Placing millions of gates and then distributing the clock heartbeat evenly to all of them.",
+ "Routing":"Drawing every wire that connects the gates, like laying out roads between buildings.",
+ "Timing, power & IR sign-off":"The final exam for speed and power: every signal must arrive on time, and no part may be starved of electricity.",
+ "Physical verification":"Two checks: does the drawing obey the factory's rules (DRC), and does it match your design (LVS)?",
+ "Tape-out & fabrication":"Sending the finished layout file (GDSII) to the factory. 'Tape-out' is the point of no return.",
+ "Post-silicon bring-up":"The first power-on of the real chip. Lab instruments show what simulation missed.",
+ "Constraints & place-and-route":"You tell the tool which pins and clock speed you want; it picks locations inside the FPGA and wires them.",
+ "Timing analysis":"Checking that every signal makes it to the next register before the next clock tick.",
+ "Bitstream & programming":"The 'bitstream' is the FPGA's executable file. You load it onto the board and your circuit comes alive.",
+ "On-board debug":"Looking inside the running FPGA with a built-in or external logic analyzer.",
+ "Schematic capture":"Drawing the circuit diagram with transistors, resistors and capacitors.",
+ "SPICE simulation":"Running a virtual lab experiment on your circuit to measure gain, speed and noise before you build it.",
+ "Layout":"Drawing the physical shapes of the circuit; for analog, symmetry and matching matter a lot.",
+ "DRC / LVS":"Checking the drawing obeys factory rules (DRC) and matches the schematic (LVS).",
+ "Parasitic extraction & post-layout sim":"Real wires add stray resistance and capacitance. Measure them and re-simulate to see the true behaviour.",
+ "Tape-out & lab bring-up":"Make the chip, then measure it on the bench and compare with your simulation."
+};
+function plainBlock(s){const p=STAGE_PLAIN[s.t];return p?`<div class="plain"><b>In plain words:</b> ${p}</div>`:""}
+
+/* ---------- Start here tab ---------- */
+const ROADS={
+ fpga:{label:"Play with an FPGA board",desc:"Fastest way to see your own hardware working. Cheap, reversible, no factory needed.",steps:[
+  {t:"Learn what gates and flip-flops are",why:"Everything else builds on this. Do it visually first — no code yet.",links:[["CircuitVerse (build circuits in browser)","https://circuitverse.org"],["Nand2Tetris (build a computer from NAND gates)","https://www.nand2tetris.org"]],out:"You can explain AND/OR/NOT gates, a flip-flop, and a clock."},
+  {t:"Write your first Verilog — no installation",why:"Practise tiny exercises and get instant pass/fail feedback.",links:[["HDLBits","https://hdlbits.01xz.net"],["EDA Playground (run a simulator in the browser)","https://www.edaplayground.com"]],out:"You can write an adder, counter and simple state machine."},
+  {t:"Install a simulator on your computer",why:"So you can work offline on bigger projects and view waveforms.",tools:["Icarus Verilog","GTKWave"],out:"You run a testbench and see signals in the waveform viewer."},
+  {t:"Get an FPGA board and the toolchain",why:"Lattice iCE40 boards work with a completely free toolchain; AMD and Intel boards use their free vendor tools.",tools:["Yosys","nextpnr","openFPGALoader","Vivado","Quartus"],links:[["Nandland FPGA tutorials","https://nandland.com"]],out:"An LED blinks because of Verilog you wrote."},
+  {t:"Debug on real hardware",why:"When it doesn't work, you need to see the real signals.",tools:["Sigrok / PulseView","Logic analyzer"],links:[["ZipCPU blog (deeper FPGA design)","https://zipcpu.com"]],out:"You can capture and decode a real signal."}]},
+ asic:{label:"Make a real chip (ASIC)",desc:"Follow the same flow as industry, with free tools and a free open process.",steps:[
+  {t:"Learn digital logic",why:"Gates, flip-flops, clocks — the vocabulary of everything else.",links:[["CircuitVerse","https://circuitverse.org"],["Nand2Tetris","https://www.nand2tetris.org"]],out:"You understand how logic becomes a computer."},
+  {t:"Write and test Verilog",why:"Your chip starts as code. Test it before anything else.",links:[["HDLBits","https://hdlbits.01xz.net"],["EDA Playground","https://www.edaplayground.com"]],tools:["Icarus Verilog","GTKWave","cocotb"],out:"A small design with a passing testbench."},
+  {t:"Turn it into gates (synthesis)",why:"See which real cells your code becomes, and how big it is.",tools:["Yosys"],out:"A gate-level netlist and an area/cell report."},
+  {t:"Run the whole flow with OpenLane",why:"One command runs synthesis, placement, routing and checks. The best way to see the complete picture.",tools:["OpenLane","OpenROAD"],links:[["Zero to ASIC course","https://zerotoasiccourse.com"]],out:"A finished layout file (GDSII) of your design."},
+  {t:"Look at and check your layout",why:"Inspect the real shapes and confirm the design rules pass.",tools:["KLayout","Magic","Netgen"],out:"You can zoom into your chip and read DRC/LVS reports."},
+  {t:"Submit it to be fabricated",why:"Community shuttles make a tiny real chip affordable.",tools:["Tiny Tapeout"],out:"Your design on a real chip."}]},
+ analog:{label:"Design analog circuits",desc:"Amplifiers, filters, references — the continuous-voltage side of chips.",steps:[
+  {t:"Get comfortable with basic circuits",why:"Voltage, current, resistors, capacitors, diodes, transistors.",links:[["Falstad circuit simulator (in browser)","https://www.falstad.com/circuit/"]],out:"You can predict what a simple RC or amplifier circuit will do."},
+  {t:"Run your first SPICE simulation",why:"SPICE is the standard way to test a circuit virtually.",tools:["ngspice"],out:"A plotted voltage waveform of a circuit you described."},
+  {t:"Draw schematics properly",why:"Use a real schematic editor that exports to the simulator.",tools:["Xschem"],out:"A schematic you can simulate."},
+  {t:"Draw the layout and check it",why:"Turn the schematic into physical shapes and verify the rules.",tools:["Magic","KLayout","Netgen"],out:"A DRC/LVS-clean layout."},
+  {t:"Re-simulate with real wiring",why:"Wire resistance and capacitance change real-world behaviour.",tools:["Magic","ngspice"],out:"Before-and-after layout results to compare."}]}
+};
+const GLOSS=[
+ ["Chip / IC","A tiny piece of silicon holding millions or billions of transistors."],
+ ["EDA","Electronic Design Automation: the software tools used to design chips."],
+ ["ASIC","A chip built for one job, fabricated in a factory. Fast and small, but expensive to make."],
+ ["FPGA","A reprogrammable chip: you load a design onto it. Slower than an ASIC but instant and reusable."],
+ ["RTL","Register-Transfer Level: the hardware code (Verilog/VHDL) that describes your chip."],
+ ["Netlist","A list of gates and how they connect. What synthesis produces."],
+ ["Synthesis","Turning RTL code into a netlist of real gates."],
+ ["Place & route","Choosing where each gate sits and drawing the wires between them."],
+ ["PDK","Process Design Kit: the factory's rule book and parts library for one manufacturing process."],
+ ["GDSII","The layout file you send to the factory. Think of it as the blueprint."],
+ ["DRC / LVS","DRC: does the layout obey factory rules? LVS: does it match the design?"],
+ ["STA / timing","Checking that every signal arrives before the next clock tick."],
+ ["Tape-out","Sending the final layout to the factory. Mistakes after this are very costly."],
+ ["SPICE","A circuit simulator for analog design."],
+ ["Testbench","Code that feeds inputs to your design and checks its outputs."],
+ ["Waveform","A graph of signals changing over time, used to debug."]
+];
+let goal="fpga";
+const GOAL_ICON={fpga:"💡",asic:"🏭",analog:"〰️"};
+function renderStart(){
+  const v=$("#v-start");
+  const road=ROADS[goal];
+  const stepHTML=road.steps.map((s,i)=>{
+    const tl=(s.tools||[]).map(n=>{const inf=INFO.find(x=>x.name===n);return inf&&inf.site?`<a href="${inf.site}" target="_blank" rel="noopener">↗ ${esc(inf.name)}</a>`:""});
+    const ll=(s.links||[]).map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">📖 ${l[0]}</a>`);
+    const names=(s.tools||[]).map(n=>{const inf=INFO.find(x=>x.name===n);return inf?`<li><b>${esc(inf.name)}</b> — ${inf.plain}</li>`:""}).join("");
+    return `<div class="step" data-n="${i+1}"><h3>${s.t}</h3><p>${s.why}</p>${names?`<ul style="margin:6px 0;padding-left:18px;font-size:14.5px">${names}</ul>`:""}<div class="links">${tl.concat(ll).join("")}</div><p class="out">✓ You'll have: ${s.out}</p></div>`;
+  }).join("");
+  v.innerHTML=`
+   <div class="hero"><h2>👋 Welcome!</h2>
+    <p>Every chip goes on the same journey. Pick what you want to do and we'll show you <b>what to learn, which tool to use, and where to learn it</b>.</p>
+    <div class="mini"><span class="s">💡 Idea</span><span class="a">→</span><span class="s">⌨️ Code</span><span class="a">→</span><span class="s">🔬 Test</span><span class="a">→</span><span class="s">🔩 Gates</span><span class="a">→</span><span class="s">🗺️ Layout</span><span class="a">→</span><span class="s">🏭 Factory</span></div>
+   </div>
+   <h2 class="sec">1 · What do you want to do?</h2>
+   <div class="goalgrid">${Object.keys(ROADS).map(k=>`<button class="goalcard" data-g="${k}" aria-pressed="${k===goal}"><span class="gi">${GOAL_ICON[k]}</span><b>${ROADS[k].label}</b><small>${ROADS[k].desc}</small><em>${ROADS[k].steps.length} steps</em></button>`).join("")}</div>
+   <h2 class="sec" id="pathTitle">2 · Your path: ${road.label}</h2>   <div class="road">${stepHTML}</div>
+   <h2 class="sec">3 · Where to next?</h2>
+   <div class="tiles">
+    <button class="tile" data-go="flow"><span>📋</span><b>Steps</b><small>The whole chip journey, with tools for each step</small></button>
+    <button class="tile" data-go="diagram"><span>🗺️</span><b>Map</b><small>The same journey as boxes and arrows</small></button>
+    <button class="tile" data-go="pick"><span>🤔</span><b>Help me choose</b><small>Answer questions, get the right tool</small></button>
+    <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
+    <button class="tile" data-go="words"><span>📖</span><b>Words explained</b><small>RTL, GDSII, tape-out… in plain English</small></button>
+   </div>`;
+  v.querySelectorAll(".goalcard").forEach(b=>b.onclick=()=>{goal=b.dataset.g;renderStart();$("#pathTitle").scrollIntoView({behavior:"smooth",block:"start"})});
+  v.querySelectorAll(".tile").forEach(b=>b.onclick=()=>showView(b.dataset.go));
+}
+function renderWords(){
+  $("#v-words").innerHTML=`<div class="hero"><h2>📖 Words explained</h2><p>Chip people use a lot of short words. Here is what they mean.</p></div>
+   <div class="gloss">${GLOSS.map(g=>`<div><b>${g[0]}</b><br>${g[1]}</div>`).join("")}</div>`;
+}
+
+/* ---------- Flowchart ---------- */
+let track="ASIC";
+const $=s=>document.querySelector(s);
+const tr=$("#trackBtns");
+Object.keys(TRACKS).forEach(k=>{
+  const b=document.createElement("button");b.className="chip";b.textContent=TRACKS[k].label;b.dataset.k=k;b.setAttribute("aria-pressed",k===track);
+  b.onclick=()=>{track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderFlow();renderDiagram();};
+  tr.appendChild(b);
+});
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+function renderFlow(){
+  const f=$("#flow");f.innerHTML="";let last=null,i=0;const st=TRACKS[track].stages;
+  st.forEach((s,idx)=>{
+    if(s.ph!==last){f.appendChild(el("div","phase",PH[s.ph][0])).style.color=`var(${PH[s.ph][1]})`;last=s.ph}
+    else{f.appendChild(el("div","arrow"))}
+    i++;
+    const n=el("div","node");n.style.setProperty("--pc",`var(${PH[s.ph][1]})`);n.tabIndex=0;n.setAttribute("role","button");n.setAttribute("aria-expanded","false");
+    n.innerHTML=`<div class="node-head"><div class="num">${i}</div><div><h3>${s.t}</h3><p class="one">${s.one}</p></div><span class="caret">▾</span></div>
+    <div class="pills">${s.tools.slice(0,4).map(t=>`<span class="pill ${t.t}">${t.n.split(" — ")[0]}</span>`).join("")}</div>
+    <div class="detail"><div class="grid">
+      <div class="tl">${plainBlock(s)}<h4>🧰 Tools you can use</h4>${s.tools.map(toolHTML).join("")}</div>
+      <div class="io"><h4>Inputs → outputs</h4><div><b>In:</b> ${s.inp}</div><div><b>Out:</b> ${s.out}</div></div>
+    </div>${s.fail?`<div class="fail">↩ ${s.fail}</div>`:""}</div>`;
+    const tog=()=>n.setAttribute("aria-expanded",n.getAttribute("aria-expanded")==="true"?"false":"true");
+    n.onclick=tog;n.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}};
+    f.appendChild(n);
+  });
+  $("#toggleAll").textContent="Expand all";
+  $("#fpgaBanner").hidden=track!=="FPGA";
+}
+$("#toggleAll").onclick=function(){
+  const nodes=[...document.querySelectorAll(".node")];const open=this.textContent==="Expand all";
+  nodes.forEach(n=>n.setAttribute("aria-expanded",open));this.textContent=open?"Collapse all":"Expand all";
+};
+
+/* ---------- Tool chooser (decision tree) ---------- */
+const L=(tool,when,examples,tip)=>({leaf:true,tool,when,examples,tip});
+const TREE={q:"What are you trying to do?",o:[
+ {l:"Check my logic works",s:"Before fabrication",n:{q:"How do you want to check it?",o:[
+   {l:"Run test vectors and look at waveforms",s:"Simulation",n:{q:"How big is the design?",o:[
+     {l:"A block or small module",n:L("Open-source simulator + waveform viewer","Quick iteration on blocks you wrote yourself.","Icarus Verilog or Verilator, with GTKWave / Surfer","Write testbenches in Python with cocotb if you prefer it to SystemVerilog.")},
+     {l:"A full chip or SoC with a team",n:L("UVM testbench on a commercial simulator","Large designs needing constrained-random tests and coverage closure.","Synopsys VCS, Cadence Xcelium, Siemens Questa","Track functional coverage; sign-off needs coverage targets met, not just passing tests.")}]}},
+   {l:"Prove it can never fail",s:"Formal",n:L("Formal property checking","Control logic, arbiters, FIFOs, protocols — corner cases random tests miss.","SymbiYosys (open); JasperGold, VC Formal (commercial)","Write SVA assertions; the tool returns a proof or a counter-example waveform.")},
+   {l:"Check netlist still matches RTL",s:"After synthesis / ECO",n:L("Equivalence checking","After synthesis or ECO, to confirm nothing changed functionally.","Synopsys Formality, Cadence Conformal","Much faster than re-simulating the gate-level design.")},
+   {l:"Catch silly mistakes early",s:"Static",n:L("Lint & CDC analysis","Before simulation: latches, width mismatch, unsynced clock crossings.","Verilator --lint-only; SpyGlass; Questa CDC","Run in CI on every commit.")}]}},
+ {l:"Turn RTL into gates",s:"Synthesis",n:{q:"Which flow?",o:[
+   {l:"Open-source / learning / tiny chip",n:L("Yosys (+ OpenLane / OpenROAD)","Free, scriptable synthesis for open PDKs like SkyWater 130nm or GF180.","Yosys + ABC","Pair it with OpenROAD for floorplan, placement and routing.")},
+   {l:"Commercial ASIC project",n:L("Commercial logic synthesis","Production flows with advanced-node libraries and constraints.","Synopsys Design Compiler, Cadence Genus","Feed it a good SDC; most timing wins come from constraints.")},
+   {l:"Target an FPGA",n:L("FPGA vendor synthesis","Mapping to LUTs/DSPs/BRAM on a specific device.","Vivado (AMD), Quartus (Intel), Yosys + nextpnr (Lattice)","Check the utilization report for LUT / BRAM / DSP fit.")}]}},
+ {l:"Fix a timing problem",s:"Setup/hold violations",n:{q:"Where do you see it?",o:[
+   {l:"Just after synthesis",n:L("Timing-driven synthesis & constraints review","Early-stage paths too slow; cheapest to fix here.","Design Compiler / Genus / Yosys; check SDC","Pipeline long paths or restructure RTL before layout.")},
+   {l:"After place-and-route",n:L("Static timing analysis + ECO","Final-stage violations with real wire delays.","OpenSTA, PrimeTime, Tempus → Innovus/ICC2 ECO","Hold violations are fixed with buffers; setup with sizing/restructuring.")},
+   {l:"On FPGA after implementation",n:L("FPGA timing report","Negative slack in Vivado / Quartus.","Vivado Timing Summary, Quartus TimeQuest","Add pipeline registers, fix clock constraints, check false paths.")}]}},
+ {l:"Fix a layout problem",s:"Physical verification",n:{q:"What does the tool report?",o:[
+   {l:"DRC violations",s:"Rule errors",n:L("DRC tool","Shapes break foundry spacing/width/density rules.","KLayout, Magic (open); Calibre, Pegasus, ICV","Open the violation markers in the layout and fix at source in P&R.")},
+   {l:"LVS mismatch",s:"Layout ≠ schematic",n:L("LVS tool","Layout netlist doesn't match the intended schematic/netlist.","Netgen (open); Calibre LVS","Look for shorts, opens, missing pins, wrong device sizes.")},
+   {l:"Wires too dense / unroutable",s:"Congestion",n:L("P&R tool congestion maps","Routing fails or detours hurt timing.","OpenROAD, Innovus, ICC2","Enlarge the floorplan, move macros, lower utilization.")}]}},
+ {l:"Make the chip testable",s:"DFT",n:L("DFT insertion & ATPG","So manufacturing can screen defective chips quickly.","Siemens Tessent, Synopsys TestMAX; Fault (open)","Add scan chains and memory BIST after synthesis.")},
+ {l:"Design / simulate an analog circuit",s:"Transistor-level",n:{q:"What stage?",o:[
+   {l:"Draw it and simulate it",n:L("Schematic + SPICE","Amplifiers, bandgaps, PLLs, ADCs — anything transistor-level.","Xschem + ngspice (open); Virtuoso + Spectre / HSPICE","Run PVT corners and Monte Carlo, not just typical.")},
+   {l:"Re-check with real wiring",n:L("Parasitic extraction + post-layout sim","Wire RC can shift gain, bandwidth, and matching.","Magic extract; Calibre xRC, StarRC, Quantus","Always simulate extracted netlists before tape-out.")}]}},
+ {l:"Prototype quickly and cheaply",s:"Before committing to silicon",n:L("FPGA prototype","Test real hardware behaviour and run software without mask costs.","Vivado / Quartus, or Yosys + nextpnr + openFPGALoader","Use an on-chip logic analyzer (ILA / SignalTap) to debug.")},
+ {l:"Debug a real chip on the bench",s:"Post-silicon",n:{q:"What do you need to see?",o:[
+   {l:"Digital signals and buses",n:L("Logic analyzer","Many digital lines, SPI/I²C/UART decode, timing relationships.","Saleae, Sigrok/PulseView, bench logic analyzers","Trigger on protocol events rather than edges.")},
+   {l:"Analog waveform shapes",n:L("Oscilloscope","Rise times, ringing, noise, clock quality, power rails.","Bench oscilloscopes with active probes","Use short ground leads; probing is part of the measurement.")},
+   {l:"Internal registers / run firmware",n:L("JTAG / SWD debugger","Halt the core, read memory, step code, inspect state.","OpenOCD, vendor JTAG probes","Needs a debug interface designed in from day one.")},
+   {l:"Production test of many chips",n:L("ATE with DFT patterns","High-volume go/no-go testing.","Advantest, Teradyne testers","Scan patterns from ATPG drive most of the test.")}]}}
+]};
+
+function renderWiz(path){
+  const w=$("#wiz");w.innerHTML="";
+  path.slice(0,-1).forEach(p=>{ // answered questions
+    if(p.label){w.appendChild(el("div","picked",`${p.q} → <b>${p.label}</b>`));w.appendChild(el("div","arrow"));}
+  });
+  const cur=path[path.length-1].node;
+  if(cur.leaf){
+    const d=el("div","leaf");
+    d.innerHTML=`<h3>${cur.tool}</h3><p>${cur.when}</p><div class="k">Examples</div><p>${cur.examples}</p><div class="k">Tip</div><p>${cur.tip}</p>`;
+    w.appendChild(d);
+  }else{
+    const q=el("div","q");q.appendChild(el("h3","",cur.q));
+    const g=el("div","opts");
+    cur.o.forEach(o=>{
+      const b=el("button","opt",`${o.l}${o.s?`<small>${o.s}</small>`:""}`);
+      b.onclick=()=>{path[path.length-1].label=o.l;path[path.length-1].q=cur.q;path.push({node:o.n});renderWiz(path)};
+      g.appendChild(b);
+    });
+    q.appendChild(g);w.appendChild(q);
+  }
+  if(path.length>1){
+    const r=el("div","");r.style.display="flex";r.style.gap="8px";r.className="reset";
+    const back=el("button","chip","← Back");back.onclick=()=>{path.pop();delete path[path.length-1].label;renderWiz(path)};
+    const rs=el("button","chip","Start over");rs.onclick=()=>renderWiz([{node:TREE}]);
+    r.append(back,rs);w.appendChild(r);
+  }
+}
+
+/* ---------- Boxes-and-arrows diagram ---------- */
+// failure loop-backs: from stage index -> to stage index (0-based), per track
+const BACK={
+ ASIC:{2:1,3:1,4:1,5:1,8:7,10:9,11:9,13:1},
+ FPGA:{2:1,4:3,5:1,6:4,7:2},
+ Analog:{2:1,4:3,5:3,6:3}
+};
+let sel=0;
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function wrap(s,max){const w=s.split(" "),out=[];let c="";w.forEach(x=>{if((c+" "+x).trim().length>max&&c){out.push(c);c=x}else c=(c+" "+x).trim()});out.push(c);return out}
+function renderDiagram(){
+  const st=TRACKS[track].stages,back=BACK[track]||{};
+  const per=3,W=220,H=88,gx=64,gy=70,pad=14;
+  const rows=Math.ceil(st.length/per);
+  const VW=pad*2+per*W+(per-1)*gx, VH=pad*2+rows*H+(rows-1)*gy;
+  const pos=i=>{const r=Math.floor(i/per),c=i%per,col=r%2===0?c:per-1-c;return{x:pad+col*(W+gx),y:pad+r*(H+gy),r}};
+  const ctr=i=>{const p=pos(i);return{x:p.x+W/2,y:p.y+H/2}};
+  let s=`<defs>
+   <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker>
+   <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--bad)"/></marker></defs>`;
+  // forward connectors
+  for(let i=1;i<st.length;i++){
+    const a=pos(i-1),b=pos(i);let d;
+    if(a.r===b.r){const y=a.y+H/2;d=b.x>a.x?`M${a.x+W} ${y}H${b.x-3}`:`M${a.x} ${y}H${b.x+W+3}`}
+    else{d=`M${a.x+W/2} ${a.y+H}V${b.y-3}`}
+    s+=`<path d="${d}" fill="none" style="stroke:var(--muted)" stroke-width="2" marker-end="url(#ah)"/>`;
+  }
+  // failure loop for selected box (drawn under boxes)
+  if(back[sel]!=null){
+    const a=ctr(sel),b=ctr(back[sel]);
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;
+    const off=Math.min(110,40+len*0.15);
+    let cx=mx+(-dy/len)*off,cy=my+(dx/len)*off;
+    cx=Math.max(8,Math.min(VW-8,cx));cy=Math.max(8,Math.min(VH-8,cy));
+    const edge=(c,tx,ty)=>{const ux=tx-c.x,uy=ty-c.y,l=Math.hypot(ux,uy)||1,nx=Math.abs(ux/l),ny=Math.abs(uy/l);
+      const k=Math.min(nx>0.001?(W/2+6)/nx:1e9,ny>0.001?(H/2+8)/ny:1e9);return{x:c.x+ux/l*k,y:c.y+uy/l*k}};
+    const p1=edge(a,cx,cy),p2=edge(b,cx,cy);
+    s+=`<path d="M${p1.x} ${p1.y}Q${cx} ${cy} ${p2.x} ${p2.y}" fill="none" style="stroke:var(--bad)" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ahr)"/>`;
+  }
+  // boxes
+  st.forEach((x,i)=>{
+    const p=pos(i),pc=`var(${PH[x.ph][1]})`;
+    const lines=wrap(esc(x.t),25).slice(0,2);
+    const open=x.tools.filter(t=>t.t==="open").length,comm=x.tools.length-open;
+    s+=`<g class="dbox${i===sel?" sel":""}" data-i="${i}" tabindex="0" role="button" aria-label="Step ${i+1}: ${esc(x.t)}">
+      <rect class="bg" x="${p.x}" y="${p.y}" width="${W}" height="${H}" rx="16" style="fill:color-mix(in srgb,${pc} 22%,#fff)"/>
+      <rect x="${p.x}" y="${p.y+10}" width="5" height="${H-20}" rx="2.5" style="fill:${pc}"/>
+      <circle cx="${p.x+28}" cy="${p.y+26}" r="12" style="fill:${pc}"/>
+      <text class="nm" x="${p.x+28}" y="${p.y+30.5}" text-anchor="middle">${i+1}</text>
+      ${lines.map((l,j)=>`<text x="${p.x+48}" y="${p.y+(lines.length>1?22:30)+j*17}">${l}</text>`).join("")}
+      <text class="sm" x="${p.x+16}" y="${p.y+H-14}">${open?open+" open":""}${open&&comm?" · ":""}${comm?comm+" commercial":""}</text>
+      ${back[i]!=null?`<text class="lb" x="${p.x+W-10}" y="${p.y+H-14}" text-anchor="end">↩ to ${back[i]+1}</text>`:""}
+    </g>`;
+  });
+  const svg=$("#dsvg");svg.setAttribute("viewBox",`0 0 ${VW} ${VH}`);svg.innerHTML=s;
+  svg.querySelectorAll(".dbox").forEach(g=>{
+    const pick=()=>{sel=+g.dataset.i;renderDiagram()};
+    g.onclick=pick;g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();$("#dsvg .dbox.sel").focus()}};
+  });
+  const x=st[sel];
+  const p=$("#dpanel");p.style.setProperty("--pc",`var(${PH[x.ph][1]})`);
+  p.innerHTML=`<div class="node-head"><div class="num">${sel+1}</div><div><h3>${esc(x.t)}</h3><p class="one">${x.one}</p></div></div>
+   <div class="detail"><div class="grid">
+    <div class="tl">${plainBlock(x)}<h4>🧰 Tools you can use</h4>${x.tools.map(toolHTML).join("")}</div>
+    <div class="io"><h4>Inputs → outputs</h4><div><b>In:</b> ${x.inp}</div><div><b>Out:</b> ${x.out}</div>
+    ${back[sel]!=null?`<div class="fail" style="margin-top:12px">↩ Loops back to step ${back[sel]+1} (${esc(st[back[sel]].t)})${x.fail?": "+x.fail.replace(/^.*?→\s*/,""):""}</div>`:""}</div>
+   </div></div>`;
+}
+
+/* ---------- tabs ---------- */
+function showView(v){
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
+  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#tracks").hidden=!(v==="flow"||v==="diagram");
+  $("#side").classList.remove("open");window.scrollTo(0,0);
+}
+$("#menu").onclick=()=>$("#side").classList.toggle("open");
+/* collapsible sidebar (desktop) */
+function setCollapsed(c){
+  document.querySelector(".app").classList.toggle("collapsed",c);
+  $("#collapse").textContent=c?"»":"«";
+}
+$("#collapse").onclick=()=>setCollapsed(!document.querySelector(".app").classList.contains("collapsed"));
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>showView(t.dataset.view));
+
+/* ---------- Search ---------- */
+const INDEX=[];
+Object.keys(TRACKS).forEach(k=>TRACKS[k].stages.forEach((s,i)=>s.tools.forEach(t=>
+  INDEX.push({k,i,stage:s.t,name:t.n,note:t.note,type:t.t,hay:(t.n+" "+t.note+" "+s.t+" "+TRACKS[k].label+" "+infoFor(t.n).map(x=>x.plain).join(" ")).toLowerCase()}))));
+const hl=(txt,terms)=>{let o=esc(txt);terms.forEach(t=>{if(t)o=o.replace(new RegExp("("+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),"<mark>$1</mark>")});return o};
+function jump(r){
+  track=r.k;sel=r.i;
+  [...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===track));
+  renderFlow();renderDiagram();showView("diagram");
+  $("#results").hidden=true;$("#dsvg").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function doSearch(){
+  const terms=$("#q").value.toLowerCase().trim().split(/\s+/).filter(Boolean),box=$("#results");
+  if(!terms.length){box.hidden=true;return}
+  const hits=INDEX.filter(r=>terms.every(t=>r.hay.includes(t)))
+    .sort((a,b)=>(b.name.toLowerCase().includes(terms[0])-a.name.toLowerCase().includes(terms[0])));
+  box.innerHTML="";box.hidden=false;
+  if(!hits.length){box.innerHTML='<div class="none">No tools match. Try a shorter word.</div>';return}
+  hits.slice(0,30).forEach(r=>{
+    const b=el("button","res",`<b style="color:var(--${r.type})">${hl(r.name,terms)}</b>
+      <small>${hl(r.note,terms)}</small><small>${TRACKS[r.k].label} · step ${r.i+1}: ${esc(r.stage)} · ${r.type==="open"?"open-source":"commercial"}</small>`);
+    b.onclick=()=>jump(r);box.appendChild(b);
+  });
+}
+$("#q").addEventListener("input",doSearch);
+$("#q").addEventListener("focus",doSearch);
+$("#q").addEventListener("keydown",e=>{if(e.key==="Escape"){$("#results").hidden=true}if(e.key==="ArrowDown"){const f=$(".res");if(f){e.preventDefault();f.focus()}}});
+$("#results").addEventListener("keydown",e=>{const c=document.activeElement;
+  if(e.key==="ArrowDown"&&c.nextElementSibling){e.preventDefault();c.nextElementSibling.focus()}
+  if(e.key==="ArrowUp"){e.preventDefault();(c.previousElementSibling||$("#q")).focus()}});
+document.addEventListener("click",e=>{if(!e.target.closest(".search"))$("#results").hidden=true});
+/* ---------- 3D FPGA board (pure CSS 3D, no libraries) ---------- */
+const PARTS={
+ fpga:{e:"🧠",n:"FPGA chip",what:"The star of the board. Inside are thousands of tiny logic blocks and wires that can be re-connected by software. Your Verilog design becomes a wiring pattern that is loaded into this chip.",like:"A box of LEGO that rebuilds itself into whatever circuit you describe."},
+ flash:{e:"💾",n:"Flash memory",what:"Remembers your design when the power is off. Each time the board powers on, the FPGA reads its design back from here.",like:"The saved game on a games console."},
+ usb:{e:"🔌",n:"USB port",what:"Brings power to the board and lets your computer send your finished design (the bitstream) to it.",like:"The front door between your computer and the board."},
+ usbchip:{e:"🔁",n:"USB / programmer chip",what:"A translator. It converts USB from your computer into the signals needed to load a design into the FPGA.",like:"A language interpreter between two people."},
+ osc:{e:"⏱️",n:"Clock (oscillator)",what:"Makes a steady tick millions of times per second. Every flip-flop inside your design waits for this tick before it changes.",like:"A metronome that keeps every musician in time."},
+ reg:{e:"⚡",n:"Voltage regulator",what:"Turns the 5 V from USB into the smaller voltages the chip needs, such as 3.3 V and 1.2 V.",like:"A tap that lowers strong water pressure to a gentle flow."},
+ caps:{e:"🔋",n:"Capacitors",what:"Tiny energy tanks next to the chip. They smooth the power so the FPGA doesn't hiccup when it suddenly needs more current.",like:"Small water tanks that keep the supply steady."},
+ led:{e:"💡",n:"LEDs",what:"Little lights you control from your design. Making one blink is the classic first FPGA project.",like:"The 'hello world' of hardware."},
+ btn:{e:"🔘",n:"Push buttons",what:"Inputs for your design. Pressed means 1, released means 0. Handy for reset or for changing a counter.",like:"A doorbell your circuit can listen to."},
+ hdr:{e:"📍",n:"Header pins (GPIO / Pmod)",what:"Pins you can wire to sensors, displays, motors or other boards. GPIO means general-purpose input/output.",like:"A row of sockets for plugging in the outside world."},
+ pcb:{e:"🟩",n:"Circuit board (PCB)",what:"The green base. Thin copper wires called traces run through its layers and connect every part.",like:"A city map where the roads are made of copper."}
+};
+const BZ=8.2;
+function cub(o){
+  const {x,y,z=BZ,w,h,d,c,part="",label="",fs=11,cls="",attrs=""}=o;
+  return `<div class="cub ${cls}" data-part="${part}" ${attrs} style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:translateZ(${z}px);--c:${c}">
+   <i class="f top" style="transform:translateZ(${d}px);font-size:${fs}px">${label}</i>
+   <i class="f s" style="top:${h}px;height:${d}px;transform-origin:0 0;transform:rotateX(90deg)"></i>
+   <i class="f s" style="top:${-d}px;height:${d}px;transform-origin:0 100%;transform:rotateX(-90deg)"></i>
+   <i class="f s" style="left:${-d}px;width:${d}px;transform-origin:100% 0;transform:rotateY(90deg)"></i>
+   <i class="f s" style="left:${w}px;width:${d}px;transform-origin:0 0;transform:rotateY(-90deg)"></i>
+  </div>`;
+}
+function boardHTML(){
+  let h='<div class="bshadow"></div>';
+  h+=cub({part:"pcb",x:0,y:0,z:0,w:400,h:260,d:8,c:"#1b8a4b",cls:"pcb"});
+  h+=cub({part:"fpga",x:150,y:75,w:110,h:110,d:14,c:"#23262f",label:"FPGA",fs:22});
+  h+=cub({part:"flash",x:290,y:50,w:54,h:30,d:6,c:"#2b2f3a",label:"FLASH",fs:10});
+  h+=cub({part:"osc",x:290,y:105,w:40,h:16,d:8,c:"#c9ced6",label:"CLK",fs:9});
+  h+=cub({part:"reg",x:70,y:40,w:34,h:26,d:8,c:"#2b2f3a",label:"PWR",fs:9});
+  h+=cub({part:"usbchip",x:70,y:170,w:40,h:40,d:6,c:"#2b2f3a",label:"USB",fs:10});
+  h+=cub({part:"usb",x:-18,y:100,w:58,h:56,d:24,c:"#b8bec9",label:"USB",fs:13});
+  h+=cub({part:"hdr",x:100,y:10,w:200,h:14,d:10,c:"#15171c",cls:"pins"});
+  h+=cub({part:"hdr",x:100,y:236,w:200,h:14,d:10,c:"#15171c",cls:"pins"});
+  LED_OFF.forEach((c,i)=>{h+=cub({part:"led",x:290+i*22,y:168,w:14,h:10,d:6,c,attrs:`data-led="${i}"`})});
+  [296,336].forEach((x,i)=>{
+    h+=cub({part:"btn",x,y:205,w:26,h:26,d:6,c:"#d0d4da",attrs:`data-btn="${i}"`});
+    h+=cub({part:"btn",x:x+5,y:210,z:BZ+6,w:16,h:16,d:6,c:"#3b82f6",attrs:`data-btn="${i}" data-cap="1"`});
+  });
+  [[132,68],[132,112],[132,170],[274,68],[274,112],[274,170],[190,58],[220,194]].forEach(p=>{h+=cub({part:"caps",x:p[0],y:p[1],w:9,h:6,d:4,c:"#d9b38c"})});
+  return h;
+}
+let bx=58,bz=-28,bzoom=1,bfit=1,bspin=false,bdrag=null,bsel="fpga";
+function applyBoard(){const b=$("#b3d");if(b)b.style.transform=`scale(${bfit*bzoom}) rotateX(${bx}deg) rotateZ(${bz}deg)`}
+function fitBoard(){const st=$("#stage");if(!st||!st.clientWidth)return;bfit=Math.min(1,(st.clientWidth-30)/480);applyBoard()}
+function boardLabel(hoverId){
+  const id=hoverId||bsel,p=PARTS[id];$("#hovername").innerHTML=p?`${hoverId?"":"📍 "}${p.e} <b>${p.n}</b>`:"";
+}
+function selectPart(id){
+  if(!PARTS[id])return;bsel=id;const p=PARTS[id];
+  document.querySelectorAll("#b3d .cub").forEach(c=>c.classList.toggle("sel",c.dataset.part===id));
+  $("#binfo").innerHTML=`<span class="bi">${p.e}</span><div><h3>${p.n}</h3><p>${p.what}</p><p class="like">💡 ${p.like}</p></div>`;
+  document.querySelectorAll("#pchips .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.p===id));
+  boardLabel();
+}
+/* ---------- Try a program: sample Verilog + a simple step-by-step simulation ---------- */
+const LED_OFF=["#5c2a2a","#5c4d12","#215238","#23405e"];
+const LED_ON=["#ff3030","#ffd21f","#35ff7a","#59b8ff"];
+const BITS=(v,n)=>Array.from({length:n},(_,i)=>(v>>(n-1-i))&1);
+const NAMES=n=>Array.from({length:n},(_,i)=>String(n-1-i));
+const SAMPLES={
+ blink:{label:"💡 Blink an LED",
+  intro:"A counter adds 1 on every clock tick. LED0 shows its top bit, so it turns on and off all by itself.",
+  hint:"Nothing to press. Watch LED0, or use Step to advance one tick at a time.",
+  code:["module blink(input clk, output led);","  // 3 bits so you can watch it. Real boards use ~24 bits.","  reg [2:0] counter = 0;","","  always @(posedge clk)          // on every clock tick...","    counter <= counter + 1;      // ...add 1","","  assign led = counter[2];       // LED shows the top bit","endmodule"],
+  init:()=>({c:0}),step:s=>({c:(s.c+1)&7}),
+  out:s=>[(s.c>>2)&1,0,0,0],hot:()=>[5,7],
+  say:s=>`counter = ${BITS(s.c,3).join("")} → top bit is ${(s.c>>2)&1} → LED0 is ${(s.c>>2)&1?"ON":"OFF"}.`,
+  inside:s=>[{t:"bits",label:"counter (3 flip-flops)",names:NAMES(3),v:BITS(s.c,3)},{t:"text",label:"wire",text:"led = counter[2]"}]},
+ gates:{label:"🔘 Button logic",comb:true,
+  intro:"No clock here. These are just logic gates: each LED is wired to the buttons, so it changes the instant you press.",
+  hint:"Tap the blue buttons on the 3D board (or BTN0 / BTN1 below). Watch the AND and XOR LEDs.",
+  code:["module gates(input btn0, input btn1, output [3:0] led);","  assign led[0] = btn0;          // a plain wire","  assign led[1] = btn1;          // another wire","  assign led[2] = btn0 & btn1;   // AND: both pressed","  assign led[3] = btn0 ^ btn1;   // XOR: exactly one pressed","endmodule"],
+  init:()=>({}),step:s=>s,
+  out:(s,b)=>[b[0],b[1],b[0]&b[1],b[0]^b[1]],
+  hot:(s,b)=>[b[0],b[1],b[0]&b[1],b[0]^b[1]].map((v,i)=>v?i+1:-1),
+  say:(s,b)=>`BTN0=${b[0]}, BTN1=${b[1]} → AND=${b[0]&b[1]}, XOR=${b[0]^b[1]}. The outputs change the instant an input does.`,
+  inside:(s,b)=>[{t:"text",label:"led[2]",text:`${b[0]} AND ${b[1]} = ${b[0]&b[1]}`},{t:"text",label:"led[3]",text:`${b[0]} XOR ${b[1]} = ${b[0]^b[1]}`}]},
+ counter:{label:"🔢 4-bit counter",
+  intro:"Every tick the number goes up by 1 and the four LEDs show it in binary. After 15 it wraps back to 0.",
+  hint:"Tap BTN0 to reset the count to 0. The left LED is the 1s place.",
+  code:["module counter(input clk, input btn0, output [3:0] led);","  reg [3:0] count = 0;","","  always @(posedge clk) begin","    if (btn0) count <= 0;          // BTN0 = reset to zero","    else      count <= count + 1;  // otherwise count up","  end","","  assign led = count;              // show the number on the LEDs","endmodule"],
+  init:()=>({c:0}),step:(s,b)=>({c:b[0]?0:(s.c+1)&15}),
+  out:s=>[s.c&1,(s.c>>1)&1,(s.c>>2)&1,(s.c>>3)&1],hot:(s,b)=>[b[0]?4:5,8],
+  say:(s,b)=>`count = ${s.c} (binary ${BITS(s.c,4).join("")}).${b[0]?" BTN0 is pressed, so it resets to 0 on the next tick.":""}`,
+  inside:s=>[{t:"bits",label:"count (4 flip-flops)",names:NAMES(4),v:BITS(s.c,4)},{t:"text",label:"wire",text:"led = count"}]},
+ chaser:{label:"🚗 Light chaser",
+  intro:"One LED is lit. Every tick the lit LED moves along (a shift register). BTN0 makes it go the other way.",
+  hint:"Tap BTN0 to reverse direction.",
+  code:["module chaser(input clk, input btn0, output [3:0] led);","  reg [3:0] pos = 4'b0001;       // one lit LED","","  always @(posedge clk)","    if (btn0) pos <= {pos[0], pos[3:1]};  // BTN0: toward LED0","    else      pos <= {pos[2:0], pos[3]};  // else: toward LED3","","  assign led = pos;","endmodule"],
+  init:()=>({p:1}),step:(s,b)=>({p:b[0]?((s.p>>1)|((s.p&1)<<3)):(((s.p<<1)&15)|(s.p>>3))}),
+  out:s=>[s.p&1,(s.p>>1)&1,(s.p>>2)&1,(s.p>>3)&1],hot:(s,b)=>[b[0]?4:5,7],
+  say:(s,b)=>`pos = ${BITS(s.p,4).join("")}. The lit LED moves toward LED${b[0]?0:3} on each tick.`,
+  inside:s=>[{t:"bits",label:"pos (4 flip-flops)",names:NAMES(4),v:BITS(s.p,4)},{t:"text",label:"wire",text:"led = pos"}]} ,
+ traffic:{label:"🚦 Traffic light",
+  intro:"A state machine: the light is always in one of three states (green, yellow, red) and moves to the next one after a set number of ticks. LED0 is red, LED1 yellow, LED2 green, and LED3 (blue) is the walk sign.",
+  hint:"Tap BTN0 as the pedestrian button while it's green: the light goes to yellow early.",
+  code:["module traffic(input clk, input btn0, output [3:0] led);","  localparam GREEN = 0, YELLOW = 1, RED = 2;","  reg [1:0] state = GREEN;       // which state we are in","  reg [2:0] timer = 0;           // ticks spent in this state","","  always @(posedge clk) begin","    timer <= timer + 1;","    case (state)","      GREEN:  if (timer == 4 || btn0) begin state <= YELLOW; timer <= 0; end","      YELLOW: if (timer == 1)         begin state <= RED;    timer <= 0; end","      RED:    if (timer == 4)         begin state <= GREEN;  timer <= 0; end","    endcase","  end","","  assign led[0] = (state == RED);     // red lamp","  assign led[1] = (state == YELLOW);  // yellow lamp","  assign led[2] = (state == GREEN);   // green lamp","  assign led[3] = (state == RED);     // walk sign","endmodule"],
+  init:()=>({s:0,t:0}),
+  step:(st,b)=>{const o=st.t;let s=st.s,t=(o+1)&7;
+    if(s===0&&(o===4||b[0])){s=1;t=0}
+    else if(s===1&&o===1){s=2;t=0}
+    else if(s===2&&o===4){s=0;t=0}
+    return{s,t}},
+  out:st=>[st.s===2?1:0,st.s===1?1:0,st.s===0?1:0,st.s===2?1:0],
+  hot:st=>[6,8+st.s,14+st.s].concat(st.s===2?[17]:[]),
+  say:(st,b)=>{const n=["GREEN","YELLOW","RED"][st.s];
+    const what=["Cars go.","Cars get ready to stop.","Cars stop. The walk sign is on."][st.s];
+    return `State = ${n}, timer = ${st.t}. ${what}${st.s===0&&b[0]?" BTN0 is pressed, so it moves to YELLOW on the next tick.":""}`},
+  inside:st=>[{t:"bits",label:"state (2 flip-flops)",names:NAMES(2),v:BITS(st.s,2)},{t:"text",label:"meaning",text:["GREEN","YELLOW","RED"][st.s]},{t:"bits",label:"timer (3 flip-flops)",names:NAMES(3),v:BITS(st.t,3)}]}
+};
+let tryKey="blink",trySt=null,tryRun=true,tryTimer=null,tryHz=2.5,tryN=0,tryHist=[],tryBtn=[0,0];
+const curS=()=>SAMPLES[tryKey];
+function snap(){return{b:[...tryBtn],l:curS().out(trySt,tryBtn)}}
+function tryReset(){trySt=curS().init();tryN=0;tryHist=[snap()];tryRender()}
+function tryTickOnce(){
+  if($("#v-board").hidden)return;
+  trySt=curS().step(trySt,tryBtn);tryN++;
+  tryHist.push(snap());if(tryHist.length>16)tryHist.shift();
+  tryRender(true);
+}
+function setRun(r){
+  tryRun=r;clearInterval(tryTimer);if(r)tryTimer=setInterval(tryTickOnce,1000/tryHz);
+  const b=$("#trun");if(b)b.textContent=r?"⏸ Pause":"▶ Run";
+}
+function toggleBtn(i){tryBtn[i]^=1;tryHist[tryHist.length-1]=snap();tryRender()}
+function hlCode(ln){
+  const parts=ln.split("//"),cm=parts.length>1?"//"+parts.slice(1).join("//"):"";
+  const esc2=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  let c=esc2(parts[0]).replace(/\b(module|endmodule|input|output|reg|wire|assign|always|posedge|begin|end|if|else|localparam|case|endcase)\b/g,'<span class="kw">$1</span>');
+  return (c+(cm?`<span class="cm">${esc2(cm)}</span>`:""))||"&nbsp;";
+}
+function drawWave(){
+  const N=16,cw=26,lw=50,rh=22,top=4;
+  const rows=[["CLK",null],["BTN0",h=>h.b[0]],["BTN1",h=>h.b[1]],["LED0",h=>h.l[0]],["LED1",h=>h.l[1]],["LED2",h=>h.l[2]],["LED3",h=>h.l[3]]];
+  const W=lw+N*cw+6,H=top+rows.length*rh+4,off=N-tryHist.length;
+  let s=`<svg viewBox="0 0 ${W} ${H}" class="wavesvg" role="img" aria-label="Signal waveforms">`;
+  rows.forEach((r,ri)=>{
+    const y0=top+ri*rh+4,y1=top+ri*rh+rh-4;let pts=[];
+    s+=`<text x="2" y="${y1}" class="wl">${r[0]}</text>`;
+    if(!r[1]){for(let i=0;i<N;i++){const x=lw+i*cw;pts.push([x,y1],[x,y0],[x+cw/2,y0],[x+cw/2,y1],[x+cw,y1])}}
+    else tryHist.forEach((h,j)=>{const x=lw+(off+j)*cw,y=r[1](h)?y0:y1;pts.push([x,y],[x+cw,y])});
+    s+=`<polyline points="${pts.map(p=>p.join(",")).join(" ")}" class="${ri>=3?"wled":""}"/>`;
+  });
+  $("#wave").innerHTML=s+"</svg>";
+}
+function tryRender(tick){
+  const S=curS(),l=S.out(trySt,tryBtn),hot=new Set(S.hot(trySt,tryBtn));
+  document.querySelectorAll("#b3d .cub[data-led]").forEach(c=>{const i=+c.dataset.led,on=!!l[i];c.classList.toggle("on",on);c.style.setProperty("--c",on?LED_ON[i]:LED_OFF[i])});
+  document.querySelectorAll("#ledrow .ld").forEach((d,i)=>d.classList.toggle("on",!!l[i]));
+  [0,1].forEach(i=>{
+    const cap=document.querySelector(`#b3d .cub[data-cap][data-btn="${i}"]`);
+    if(cap){cap.style.transform=`translateZ(${tryBtn[i]?BZ+2:BZ+6}px)`;cap.style.setProperty("--c",tryBtn[i]?"#1e40af":"#3b82f6")}
+    const pb=$("#pbtn"+i);if(pb)pb.setAttribute("aria-pressed",!!tryBtn[i]);
+  });
+  $("#code").innerHTML=S.code.map((ln,i)=>`<span class="ln${hot.has(i)?" hot":""}">${hlCode(ln)}</span>`).join("");
+  $("#inside").innerHTML=S.inside(trySt,tryBtn).map(r=>r.t==="bits"
+    ?`<div class="irow"><span class="il">${r.label}</span><span>${r.v.map((v,k)=>`<span class="bit${v?" on":""}">${v}<small>${r.names[k]}</small></span>`).join("")}</span></div>`
+    :`<div class="irow"><span class="il">${r.label}</span><code>${r.text}</code></div>`).join("");
+  $("#say").textContent=S.say(trySt,tryBtn);
+  $("#clk").textContent=S.comb?"No clock needed":`⏱ Clock tick #${tryN}`;
+  drawWave();
+  if(tick){const f=document.querySelector('#b3d .cub[data-part="fpga"]');if(f){f.classList.add("tick");setTimeout(()=>f.classList.remove("tick"),160)}}
+}
+function selectSample(k){
+  tryKey=k;tryBtn=[0,0];
+  document.querySelectorAll("#samples .chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.s===k));
+  $("#tintro").textContent=SAMPLES[k].intro;$("#thint").textContent="👉 "+SAMPLES[k].hint;
+  tryReset();
+}
+function initTry(){
+  $("#tryit").innerHTML=`<h2 class="sec">▶ Run a program on the board</h2>
+   <p class="secsub">Pick a sample program, watch the LEDs react, and press the buttons (tap a blue button on the 3D board, or use BTN0 / BTN1 below).</p>
+   <div class="tryit">
+    <div class="pchips" id="samples">${Object.keys(SAMPLES).map(k=>`<button class="chip" data-s="${k}" aria-pressed="false">${SAMPLES[k].label}</button>`).join("")}</div>
+    <p id="tintro" class="tintro"></p><p id="thint" class="thint"></p>
+    <div class="tgrid">
+     <div class="codebox"><div class="ch">📝 Verilog code</div><pre id="code"></pre><p class="fine">Highlighted lines are the ones doing the work right now.</p></div>
+     <div class="reactbox">
+      <div class="ch">💡 The board reacts</div>
+      <div class="ledrow" id="ledrow">${[0,1,2,3].map(i=>`<span class="ldw"><i class="ld l${i}"></i><small>LED${i}</small></span>`).join("")}
+       <button class="chip pb" id="pbtn0" aria-pressed="false">BTN0</button><button class="chip pb" id="pbtn1" aria-pressed="false">BTN1</button></div>
+      <div class="ctrls"><button class="chip" id="trun">⏸ Pause</button><button class="chip" id="tstep">⏭ Step</button><button class="chip" id="treset">↺ Restart</button>
+       <select id="tspeed" aria-label="Speed"><option value="1">Slow</option><option value="2.5" selected>Medium</option><option value="6">Fast</option></select></div>
+      <div class="clk" id="clk"></div>
+      <div class="ch" style="margin-top:10px">🧠 Inside the FPGA</div><div id="inside"></div>
+      <div class="say" id="say"></div>
+     </div>
+    </div>
+    <div class="ch" style="margin-top:14px">📈 Signals over time <small class="fine">(newest on the right)</small></div>
+    <div id="wave"></div>
+    <p class="fine">This is a simplified step-by-step simulation of what the code does. On a real FPGA the logic is physical wiring: everything updates at the same instant on every clock tick, millions of times per second (for example 12 MHz). Here it's slowed down so you can watch.</p>
+   </div>`;
+  $("#samples").onclick=e=>{const b=e.target.closest("[data-s]");if(b)selectSample(b.dataset.s)};
+  $("#trun").onclick=()=>setRun(!tryRun);
+  $("#tstep").onclick=()=>{setRun(false);tryTickOnce()};
+  $("#treset").onclick=()=>tryReset();
+  $("#tspeed").onchange=e=>{tryHz=+e.target.value;if(tryRun)setRun(true)};
+  $("#pbtn0").onclick=()=>toggleBtn(0);$("#pbtn1").onclick=()=>toggleBtn(1);
+  selectSample("blink");setRun(true);
+}
+
+const REAL_BOARDS=[
+ {n:"iCEBreaker",chip:"Lattice iCE40 UP5k",tool:"open",tools:"Yosys + nextpnr (fully open-source)",good:"Learning. Designed for beginners, with a completely free toolchain and friendly guides.",links:[["Project site","https://icebreaker-fpga.org"],["Buy page (1BitSquared)","https://1bitsquared.com/products/icebreaker"]]},
+ {n:"Tang Nano 9K",chip:"Gowin GW1NR-9",tool:"open",tools:"Gowin IDE, or Yosys + nextpnr",good:"A small, inexpensive board with an HDMI port and a built-in USB programmer.",links:[["Sipeed wiki","https://wiki.sipeed.com/hardware/en/tang/Tang-Nano-9K/Nano-9K.html"]]},
+ {n:"ULX3S",chip:"Lattice ECP5",tool:"open",tools:"Yosys + nextpnr (fully open-source)",good:"Going further: bigger FPGA, plus HDMI, SD card and more. Popular in the open-source FPGA community.",links:[["Project site","https://ulx3s.github.io"],["Design files (GitHub)","https://github.com/emard/ulx3s"]]},
+ {n:"Digilent Basys 3",chip:"AMD/Xilinx Artix-7",tool:"vendor",tools:"Vivado (free edition available)",good:"University courses. Lots of switches, LEDs and a 7-segment display, so you can try things right away.",links:[["Digilent reference","https://digilent.com/reference/programmable-logic/basys-3/start"]]},
+ {n:"Digilent Arty A7",chip:"AMD/Xilinx Artix-7",tool:"vendor",tools:"Vivado (free edition available)",good:"Projects with Arduino-style headers, or soft CPUs running on the FPGA.",links:[["Digilent reference","https://digilent.com/reference/programmable-logic/arty-a7/start"]]},
+ {n:"Terasic DE10-Lite",chip:"Intel MAX 10",tool:"vendor",tools:"Quartus Prime Lite (free edition available)",good:"Learning with Intel/Altera tools; common in university labs.",links:[["Terasic product page","https://www.terasic.com.tw/cgi-bin/page/archive.pl?No=1021"]]}
+];
+function renderBoard(){
+  const v=$("#v-board");
+  v.innerHTML=`<div class="hero"><h2>🧊 A 3D FPGA board</h2><p>A simplified FPGA board. <b>Drag</b> to spin it, <b>scroll</b> or use ＋ － to zoom, and <b>tap any part</b> to see what it does. Then <b>run sample code</b> below and watch the LEDs react.</p></div>
+   <div class="stage" id="stage">
+    <div class="hint3d">👆 Drag to spin · Tap a part</div>
+    <div class="board3d" id="b3d">${boardHTML()}</div>
+    <div class="hovername" id="hovername"></div>
+    <div class="stagebtns"><button class="chip" id="bplus" aria-label="Zoom in">＋</button><button class="chip" id="bminus" aria-label="Zoom out">－</button><button class="chip" id="bspin" aria-pressed="false">▶ Auto-spin</button><button class="chip" id="btop">⬇ Top view</button><button class="chip" id="bres">↺ Reset</button></div>
+   </div>
+   <div class="binfo" id="binfo"></div>
+   <div id="tryit"></div>
+   <h2 class="sec">All the parts</h2>
+   <div class="pchips" id="pchips">${Object.keys(PARTS).map(k=>`<button class="chip" data-p="${k}" aria-pressed="false">${PARTS[k].e} ${PARTS[k].n}</button>`).join("")}</div>
+   <p class="secsub">Real boards place things differently, but they all have these same kinds of parts.</p>
+   <h2 class="sec">🛒 Real boards you can get</h2>
+   <p class="secsub">Pick one that matches the free tools you want to use. Prices and stock change, so check the seller's page. Boards marked <b>Open tools</b> work with the free Yosys + nextpnr tools, covered in the Start here path.</p>
+   <div class="boardlist">${REAL_BOARDS.map(b=>`<div class="rb"><div class="rbh"><b>${b.n}</b><span class="tag ${b.tool==="open"?"open":"web"}">${b.tool==="open"?"Open tools":"Vendor tools"}</span></div>
+     <p class="rbchip">${b.chip}</p><p>${b.good}</p><p class="rbtools"><b>Software:</b> ${b.tools}</p>
+     <div class="links">${b.links.map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">↗ ${l[0]}</a>`).join("")}</div></div>`).join("")}</div>`;
+  const st=$("#stage");
+  st.addEventListener("pointerdown",e=>{if(e.target.closest(".stagebtns"))return;bdrag={x:e.clientX,y:e.clientY,bx,bz,moved:false};st.classList.add("grab")});
+  window.addEventListener("pointermove",e=>{
+    if(!bdrag)return;const dx=e.clientX-bdrag.x,dy=e.clientY-bdrag.y;
+    if(Math.hypot(dx,dy)>5)bdrag.moved=true;
+    if(bdrag.moved){bz=bdrag.bz-dx*0.5;bx=Math.max(0,Math.min(90,bdrag.bx-dy*0.4));applyBoard()}
+  });
+  window.addEventListener("pointerup",e=>{
+    if(!bdrag)return;const d=bdrag;bdrag=null;st.classList.remove("grab");
+    if(!d.moved){const c=e.target.closest&&e.target.closest(".cub");if(c&&c.dataset.part)selectPart(c.dataset.part);if(c&&c.dataset.btn!==undefined)toggleBtn(+c.dataset.btn)}
+  });
+  st.addEventListener("mouseover",e=>{const c=e.target.closest(".cub");boardLabel(c&&c.dataset.part||null)});
+  st.addEventListener("mouseleave",()=>boardLabel());
+  st.addEventListener("wheel",e=>{e.preventDefault();bzoom=Math.max(.6,Math.min(1.9,bzoom*(e.deltaY<0?1.08:.93)));applyBoard()},{passive:false});
+  $("#bplus").onclick=()=>{bzoom=Math.min(1.9,bzoom*1.2);applyBoard()};
+  $("#bminus").onclick=()=>{bzoom=Math.max(.6,bzoom/1.2);applyBoard()};
+  $("#bspin").onclick=function(){bspin=!bspin;this.setAttribute("aria-pressed",bspin);this.textContent=bspin?"⏸ Stop spin":"▶ Auto-spin"};
+  $("#btop").onclick=()=>{bx=0;bz=0;applyBoard()};
+  $("#bres").onclick=()=>{bx=58;bz=-28;bzoom=1;applyBoard()};
+  $("#pchips").onclick=e=>{const b=e.target.closest("[data-p]");if(b)selectPart(b.dataset.p)};
+  selectPart("fpga");applyBoard();initTry();
+  (function loop(){if(bspin&&!bdrag&&!$("#v-board").hidden){bz+=.35;applyBoard()}requestAnimationFrame(loop)})();
+  window.addEventListener("resize",fitBoard);
+}
+
+renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();$("#fpgaBanner").onclick=()=>showView("board");showView("start");
+</script>
+</body>
+</html>
