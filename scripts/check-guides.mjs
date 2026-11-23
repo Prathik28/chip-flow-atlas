@@ -21,7 +21,7 @@ const GUIDES = new Function(html.slice(start, end) + ';return GUIDES;')();
 
 const failures = [];
 const check = (guide, label, ok, detail = '') => {
-  console.log(`${ok ? '  ✓' : '  ✗'} ${label}${!ok && detail ? '\n      ' + String(detail).trim().split('\n').slice(0, 6).join('\n      ') : ''}`);
+  console.log(`${ok ? '  ✓' : '  ✗'} ${label}${!ok && detail ? '\n      ' + String(detail).trim().split('\n').slice(0, 30).join('\n      ') : ''}`);
   if (!ok) failures.push(`${guide}: ${label}`);
 };
 
@@ -46,6 +46,19 @@ const cmdWith = (cmds, text) => {
   if (!c) throw new Error(`No command containing "${text}" in the guide`);
   return c;
 };
+// Counts the flip-flops in the output of Yosys' `stat`. Newer versions print "4   $_SDFF_PP0_",
+// older ones print "$_SDFF_PP0_    4", so both layouts are accepted.
+const countFlipFlops = out => {
+  const stats = out.slice(out.lastIndexOf('Printing statistics'));
+  let n = 0;
+  for (const line of stats.split('\n')) {
+    const a = line.match(/^\s+(\d+)\s+(\$_\w*DFF\w*)\s*$/);   // count first
+    const b = line.match(/^\s+(\$_\w*DFF\w*)\s+(\d+)\s*$/);   // name first
+    if (a) n += Number(a[1]); else if (b) n += Number(b[2]);
+  }
+  return { n, stats };
+};
+const tail = (text, lines = 25) => text.trim().split('\n').slice(-lines).join('\n');
 const sandbox = id => {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), `guide-${id}-`));
   return d;
@@ -74,15 +87,13 @@ for (const guide of GUIDES) {
       const r = run(cmdWith(cmds, 'yosys -p'), dir);
       check(guide.id, 'yosys synthesises counter.v', r.code === 0, r.out);
       // 4 flip-flops, whatever the cell is called in this Yosys version
-      const stats = r.out.slice(r.out.lastIndexOf('Printing statistics'));
-      const ffs = [...stats.matchAll(/^\s+(\d+)\s+\$_\w*DFF\w*/gm)].reduce((n, m) => n + Number(m[1]), 0);
-      check(guide.id, `the 4-bit counter becomes 4 flip-flops (found ${ffs})`, ffs === 4, stats);
+      const { n: ffs, stats } = countFlipFlops(r.out);
+      check(guide.id, `the 4-bit counter becomes 4 flip-flops (found ${ffs})`, ffs === 4, tail(stats));
       const wide = sandbox('synth8');
       fs.writeFileSync(path.join(wide, 'counter.v'), files['counter.v'].replace('[3:0]', '[7:0]'));
       const r8 = run(cmdWith(cmds, 'yosys -p'), wide);
-      const stats8 = r8.out.slice(r8.out.lastIndexOf('Printing statistics'));
-      const ffs8 = [...stats8.matchAll(/^\s+(\d+)\s+\$_\w*DFF\w*/gm)].reduce((n, m) => n + Number(m[1]), 0);
-      check(guide.id, `the experiment works: [7:0] gives 8 flip-flops (found ${ffs8})`, ffs8 === 8, stats8);
+      const { n: ffs8, stats: stats8 } = countFlipFlops(r8.out);
+      check(guide.id, `the experiment works: [7:0] gives 8 flip-flops (found ${ffs8})`, ffs8 === 8, tail(stats8));
     }
 
     if (guide.id === 'spice') {
