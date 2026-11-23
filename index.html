@@ -538,6 +538,41 @@ footer{margin-top:48px}
 .dbox:hover,.dbox:focus-visible{transform:translate(-2px,-4px);filter:drop-shadow(6px 8px 0 var(--ink))}
 .dbox:active{transform:translate(2px,2px);filter:drop-shadow(1px 1px 0 var(--ink))}
 @media(prefers-reduced-motion:reduce){.dbox{transition:none}.dbox:hover,.dbox:focus-visible{transform:none}}
+
+/* ---- project guides ---- */
+.gguides{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.gcard{align-items:flex-start}
+.gcard .gmeta,.hero .gmeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13.5px;font-weight:800;color:var(--muted);margin-top:6px}
+.hero .gmeta{margin:10px 0 4px}
+.gneeds{font-size:13.5px;font-weight:700;color:var(--ink)}
+.gback{margin:0 0 14px;cursor:pointer}
+.gl-h{font:600 16px Fredoka,Nunito,sans-serif;margin:14px 0 4px!important}
+.gul{margin:6px 0 8px;padding-left:22px}
+.gul li{margin:4px 0}
+.step p{font-size:15.5px}
+.step code,.hero code,.gwrap code,.gcall code{background:#fff1cf;border:1.5px solid var(--ink);border-radius:6px;padding:0 6px;font:13.5px ui-monospace,Menlo,Consolas,monospace}
+.gcall{border:2px solid var(--ink);border-radius:12px;padding:10px 14px;margin:10px 0;font-size:14.5px;font-weight:600}
+.gcall.tip{background:#e8fbe9}
+.gcall.warn{background:#fff1cf}
+.gcode{margin:10px 0;border:2.5px solid var(--ink);border-radius:14px;overflow:hidden;background:#241c3a;box-shadow:2px 2px 0 var(--ink)}
+.gcode-h{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#ffe27a;color:var(--ink);border-bottom:2.5px solid var(--ink);padding:5px 10px;font-weight:800;font-size:13.5px}
+.gcode-h .chip{padding:2px 12px;font-size:12.5px;cursor:pointer;box-shadow:none}
+.gcode.term .gcode-h{background:#a5d8ff}
+.gcode.out .gcode-h{background:#b8f2c8}
+.gcode pre{margin:0;padding:10px 0;color:#e9e4ff;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
+.gcode pre .ln{padding:0 14px}
+.gcode.out pre{padding:10px 14px;white-space:pre}
+.tl{display:block;padding:0 14px;white-space:pre}
+.tl::before{content:"$ ";color:#7dd3fc;user-select:none}
+.gascii{margin:10px 0;background:#fff7e6;border:2px dashed var(--ink);border-radius:12px;padding:10px 14px;font:13.5px/1.4 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
+.gos{margin:10px 0;border:2px dashed var(--ink);border-radius:14px;padding:10px 12px;background:#fffdf6}
+.gos-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.gos-tabs .chip{padding:4px 14px;font-size:13.5px;cursor:pointer}
+.gos-body>p:first-child{margin-top:4px}
+.gwrap{background:#e8fbe9;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px 20px;margin-top:8px}
+.gwrap h3{margin:0 0 4px;font-size:20px}
+.gnext{display:flex;gap:8px;flex-wrap:wrap}
+.gnext .chip{cursor:pointer}
 </style>
 </head>
 <body>
@@ -555,6 +590,7 @@ footer{margin-top:48px}
     <button class="tab" role="tab" data-view="flow" aria-selected="false" title="Steps"><span class="ti">📋</span><span class="tt"><b>Steps</b><small>The full chip journey</small></span></button>
     <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>Boxes and arrows</small></span></button>
     <button class="tab" role="tab" data-view="board" aria-selected="false" title="3D FPGA board"><span class="ti">🧊</span><span class="tt"><b>3D FPGA board</b><small>Spin it, run code</small></span></button>
+    <button class="tab" role="tab" data-view="guides" aria-selected="false" title="Project guides"><span class="ti">🛠️</span><span class="tt"><b>Project guides</b><small>Hands-on, step by step</small></span></button>
     <button class="tab" role="tab" data-view="pick" aria-selected="false" title="Help me choose"><span class="ti">🤔</span><span class="tt"><b>Help me choose</b><small>Find the right tool</small></span></button>
     <button class="tab" role="tab" data-view="words" aria-selected="false" title="Words explained"><span class="ti">📖</span><span class="tt"><b>Words explained</b><small>Plain-English glossary</small></span></button>
   </nav>
@@ -577,6 +613,7 @@ footer{margin-top:48px}
 <section id="v-start"></section>
 <section id="v-words" hidden></section>
 <section id="v-board" hidden></section>
+<section id="v-guides" hidden></section>
 
 <section id="v-diagram" hidden>
   <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
@@ -898,6 +935,7 @@ function renderStart(){
     <button class="tile" data-go="diagram"><span>🗺️</span><b>Map</b><small>The same journey as boxes and arrows</small></button>
     <button class="tile" data-go="pick"><span>🤔</span><b>Help me choose</b><small>Answer questions, get the right tool</small></button>
     <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
+    <button class="tile" data-go="guides"><span>🛠️</span><b>Project guides</b><small>Hands-on projects, step by step</small></button>
     <button class="tile" data-go="words"><span>📖</span><b>Words explained</b><small>RTL, GDSII, tape-out… in plain English</small></button>
    </div>`;
   initJourney();
@@ -915,7 +953,7 @@ const $=s=>document.querySelector(s);
 const tr=$("#trackBtns");
 Object.keys(TRACKS).forEach(k=>{
   const b=document.createElement("button");b.className="chip";b.textContent=TRACKS[k].label;b.dataset.k=k;b.setAttribute("aria-pressed",k===track);
-  b.onclick=()=>{track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderFlow();renderDiagram();};
+  b.onclick=()=>{setTrack(k);syncUrl()};
   tr.appendChild(b);
 });
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
@@ -1082,12 +1120,237 @@ function renderDiagram(){
   $("#dback").onclick=()=>$("#v-diagram .hint").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
+/* ---------- Project guides: step-by-step beginner projects ---------- */
+const CTR=['module counter(input clk, input reset, output reg [3:0] count);','  always @(posedge clk) begin','    if (reset) count <= 0;          // reset = 1: go back to zero','    else       count <= count + 1;  // otherwise: add 1 on every clock tick','  end','endmodule'].join("\n");
+const WSLNOTE='On Windows the easiest way is <b>WSL</b>, a small Linux that runs inside Windows. <a href="https://learn.microsoft.com/windows/wsl/install" target="_blank" rel="noopener">Install it with Microsoft\'s guide</a>, open the <b>Ubuntu</b> app, and use the Linux commands.';
+const GUIDES=[
+{id:"sim",emoji:"🔬",title:"Simulate your first circuit",level:"Beginner",time:"About 20 minutes",needs:"Just your computer",
+ blurb:"Write a 4-bit counter in Verilog, test it, and watch its signals on a waveform.",
+ learn:["What a Verilog module and a testbench are","How to compile and run a simulation","How to read a waveform"],
+ steps:[
+ {h:"Install two free tools",b:[
+  {t:"p",html:"You need a <b>simulator</b> (Icarus Verilog) and a <b>waveform viewer</b> (GTKWave). Open a terminal and run:"},
+  {t:"os",mac:[{t:"cmd",code:"brew install icarus-verilog\nbrew install --cask gtkwave"},{t:"p",html:"No Homebrew yet? Install it first from <a href=\"https://brew.sh\" target=\"_blank\" rel=\"noopener\">brew.sh</a>."}],
+      linux:[{t:"cmd",code:"sudo apt update\nsudo apt install iverilog gtkwave"}],
+      win:[{t:"p",html:WSLNOTE},{t:"cmd",code:"sudo apt update\nsudo apt install iverilog gtkwave"}]},
+  {t:"p",html:"Check that it worked:"},{t:"cmd",code:"iverilog -V"},{t:"out",text:"Icarus Verilog version 12.0 (stable) ..."},
+  {t:"tip",html:"Don't want to install anything yet? <a href=\"https://www.edaplayground.com\" target=\"_blank\" rel=\"noopener\">EDA Playground</a> runs Verilog in your browser. You can paste the two files below into it."}]},
+ {h:"Make a folder for your project",b:[{t:"cmd",code:"mkdir first-circuit\ncd first-circuit"}]},
+ {h:"Write the circuit",b:[
+  {t:"p",html:"A Verilog <code>module</code> is a block of hardware. This one is a <b>4-bit counter</b>: on every clock tick it adds 1, and when <code>reset</code> is 1 it goes back to 0. Save this as <b>counter.v</b>:"},
+  {t:"file",name:"counter.v",lang:"v",code:CTR}]},
+ {h:"Write a testbench",b:[
+  {t:"p",html:"A <b>testbench</b> is not part of the chip. It's a small script that plays the outside world: it makes the clock tick, presses reset, and records every signal. Save this as <b>tb.v</b>:"},
+  {t:"file",name:"tb.v",lang:"v",code:['`timescale 1ns/1ps','module tb;','  reg clk = 0, reset = 1;','  wire [3:0] count;','','  counter dut(.clk(clk), .reset(reset), .count(count));  // the circuit we are testing','','  always #5 clk = ~clk;            // flip the clock every 5 ns','','  initial begin','    $dumpfile("wave.vcd");         // record every signal into wave.vcd','    $dumpvars(0, tb);','    #20 reset = 0;                 // after 20 ns, let it start counting','    #200 $finish;                  // stop after 200 more ns','  end','','  always @(posedge clk) $display("time=%0d ns  count=%0d", $time, count);','endmodule'].join("\n")}]},
+ {h:"Compile and run it",b:[
+  {t:"cmd",code:"iverilog -o sim counter.v tb.v\nvvp sim"},
+  {t:"out",text:"VCD info: dumpfile wave.vcd opened for output.\ntime=5 ns  count=x\ntime=15 ns  count=0\ntime=25 ns  count=0\ntime=35 ns  count=1\ntime=45 ns  count=2\ntime=55 ns  count=3\n..."},
+  {t:"p",html:"<code>x</code> means <b>unknown</b>: before the first reset tick the counter has no value yet. After that it counts 0, 1, 2, 3… and wraps from 15 back to 0, because a 4-bit number can't go higher."}]},
+ {h:"Look at the waveform",b:[
+  {t:"os",mac:[{t:"p",html:"Open the <b>GTKWave</b> app from your Applications folder, choose <b>File → Open New Window</b>, and pick <b>wave.vcd</b> from your project folder."}],
+      linux:[{t:"cmd",code:"gtkwave wave.vcd"}],
+      win:[{t:"cmd",code:"gtkwave wave.vcd"},{t:"p",html:"Windows 11 shows Linux windows automatically. If nothing appears, use the browser viewer in the tip below."}]},
+  {t:"p",html:"In GTKWave: in the left list click <b>tb</b>, select <b>clk</b>, <b>reset</b> and <b>count</b>, then press <b>Append</b>. Right-click <b>count</b> → <b>Data Format → Decimal</b> to see numbers instead of bits."},
+  {t:"tip",html:"No GTKWave? Open <a href=\"https://app.surfer-project.org\" target=\"_blank\" rel=\"noopener\">Surfer</a> in your browser and use its File menu to open <b>wave.vcd</b>."}]},
+ {h:"Experiment!",b:[
+  {t:"p",html:"Change one thing in the files, run the two commands again, and see what changes:"},
+  {t:"ul",items:["Change <code>#5</code> to <code>#10</code> in <b>tb.v</b>: the clock gets slower.","Change <code>[3:0]</code> to <code>[7:0]</code> in both <b>counter.v</b> and <b>tb.v</b>: now it's an 8-bit counter.","<b>Challenge:</b> make it count <i>down</i> instead of up."]}]}
+ ],
+ wrap:"You just did what chip engineers do every day: describe hardware in code, test it <i>before</i> building anything, and inspect the signals.",
+ next:["synth"]},
+
+{id:"synth",emoji:"🔩",title:"See the real gates",level:"Beginner",time:"About 10 minutes",needs:"Just your computer",
+ blurb:"Turn your counter into logic gates and flip-flops with Yosys, and see what your code really costs.",
+ learn:["What synthesis does","How code becomes flip-flops and logic gates","Why a bigger number means more hardware"],
+ steps:[
+ {h:"Install Yosys",b:[
+  {t:"os",mac:[{t:"cmd",code:"brew install yosys"}],linux:[{t:"cmd",code:"sudo apt update\nsudo apt install yosys"}],win:[{t:"p",html:WSLNOTE},{t:"cmd",code:"sudo apt update\nsudo apt install yosys"}]},
+  {t:"cmd",code:"yosys -V"},{t:"out",text:"Yosys 0.xx ..."}]},
+ {h:"Get the counter",b:[
+  {t:"p",html:"Use the <b>counter.v</b> from the first guide (open your terminal in that folder). Or create it again:"},
+  {t:"file",name:"counter.v",lang:"v",code:CTR}]},
+ {h:"Run synthesis",b:[
+  {t:"p",html:"<b>Synthesis</b> turns your code into a list of real hardware building blocks. Run:"},
+  {t:"cmd",code:"yosys -p \"read_verilog counter.v; synth -top counter; stat\""},
+  {t:"p",html:"Yosys prints a lot. Scroll to the bottom and find the cell list under <b>Printing statistics</b>. It looks like this:"},
+  {t:"out",text:"=== counter ===\n\n       10 cells\n        1   $_AND_\n        1   $_NAND_\n        1   $_NOT_\n        4   $_SDFF_PP0_\n        1   $_XNOR_\n        2   $_XOR_"},
+  {t:"p",html:"The exact numbers can differ a little between Yosys versions."}]},
+ {h:"Read the result",b:[
+  {t:"ul",items:["<code>$_SDFF_PP0_</code> × 4 are <b>flip-flops</b> (tiny memory cells with a reset). They hold the 4 bits of <code>count</code>.","The AND / XOR / NOT cells are <b>logic gates</b> that work out <code>count + 1</code>."]},
+  {t:"p",html:"So the single line <code>count &lt;= count + 1</code> became about 4 memory cells plus a handful of gates."}]},
+ {h:"Experiment!",b:[
+  {t:"p",html:"Change <code>[3:0]</code> to <code>[7:0]</code> in <b>counter.v</b> and run the same command again. You should now see <b>8 flip-flops</b> and about 22 cells in total. Bigger numbers mean more hardware, which is why chip designers care about every single bit."}]}
+ ],
+ wrap:"That's <b>synthesis</b>: the step that turns code into real building blocks. The next steps in a chip flow are placing those blocks and wiring them up.",
+ next:["spice","fpga"]},
+
+{id:"spice",emoji:"〰️",title:"Your first analog simulation",level:"Beginner",time:"About 15 minutes",needs:"Just your computer",
+ blurb:"Simulate a resistor and a capacitor with ngspice and watch the capacitor charge.",
+ learn:["What SPICE is","How a circuit is written as a list of parts","What an RC time constant means"],
+ steps:[
+ {h:"Install ngspice",b:[
+  {t:"os",mac:[{t:"cmd",code:"brew install ngspice"}],linux:[{t:"cmd",code:"sudo apt update\nsudo apt install ngspice"}],win:[{t:"p",html:WSLNOTE},{t:"cmd",code:"sudo apt update\nsudo apt install ngspice"}]},
+  {t:"cmd",code:"ngspice -v"},{t:"out",text:"** ngspice-47 : Circuit level simulation program\n..."}]},
+ {h:"Describe the circuit",b:[
+  {t:"p",html:"A <b>SPICE</b> file lists the parts and how they connect. Our circuit is a 5 V source, a 1 kΩ resistor, and a 1 µF capacitor to ground. That is a simple low-pass filter, and the capacitor slowly charges:"},
+  {t:"pre",text:"  5 V ──[ R 1 kΩ ]──┬── out\n                    │\n                 [ C 1 µF ]\n                    │\n                   GND"},
+  {t:"p",html:"Save this as <b>rc.cir</b>:"},
+  {t:"file",name:"rc.cir",lang:"spice",code:['RC low-pass filter: charging a capacitor','* A 5 V step is applied to a resistor in series with a capacitor.','V1 in 0 PULSE(0 5 0 1n 1n 10m 20m)','R1 in out 1k','C1 out 0 1u','','.tran 10u 5m','','.control','run','* measure the output voltage after 1 ms (= one time constant R x C)','meas tran v_1ms FIND v(out) AT=1m','meas tran v_5ms FIND v(out) AT=5m','* save time and voltage to a file you can open in a spreadsheet','wrdata rc_output.csv v(out)','quit','.endc','.end'].join("\n")}]},
+ {h:"Run it",b:[
+  {t:"cmd",code:"ngspice -b rc.cir"},
+  {t:"p",html:"Among the lines it prints, find these two:"},
+  {t:"out",text:"v_1ms               =  3.16060e+00\nv_5ms               =  4.96631e+00"}]},
+ {h:"Does that make sense?",b:[
+  {t:"p",html:"Resistance × capacitance = 1 kΩ × 1 µF = <b>1 ms</b>. That is the circuit's <b>time constant</b>. After one time constant a charging capacitor reaches about <b>63%</b> of its final value, and 63% of 5 V is 3.16 V. After five time constants it's almost full (4.97 V). The simulator agrees with the formula <code>V = 5 × (1 − e<sup>−t/RC</sup>)</code>."}]},
+ {h:"Draw the curve",b:[
+  {t:"p",html:"The script also saved <b>rc_output.csv</b> with two columns, time and voltage. Open it in Excel or Google Sheets (choose <i>space</i> as the separator) and make a line chart of column 2 against column 1. You'll see the capacitor charging curve."}]},
+ {h:"Experiment!",b:[
+  {t:"p",html:"Change <code>1u</code> to <code>10u</code> on the <code>C1</code> line and run again. A 10× bigger capacitor charges 10× slower: you should see about <b>0.48 V</b> after 1 ms and <b>1.97 V</b> after 5 ms. <b>Challenge:</b> change R1 to <code>10k</code> and predict the result before you run it."}]}
+ ],
+ wrap:"SPICE is how analog designers test circuits before they build them, from simple filters like this one up to amplifiers and ADCs.",
+ next:["sim"]},
+
+{id:"fpga",emoji:"💡",title:"Blink LEDs on a real FPGA",level:"Beginner+",time:"About 45 minutes",needs:"An iCEBreaker FPGA board and a USB cable",
+ blurb:"Go from code to a real board: build a blink design with the free open-source FPGA tools and load it onto the chip.",
+ learn:["The full FPGA flow: code → gates → placement → bitstream → board","What a pin constraints file does","Why a counter makes a slow blink"],
+ note:"These steps follow the official iCEBreaker examples. If you use a different board, the pin names and numbers in step 5 will be different. Look them up in that board's documentation.",
+ steps:[
+ {h:"Get the board",b:[
+  {t:"p",html:"The <b>iCEBreaker</b> is a beginner FPGA board that works with a completely free toolchain. Plug it into your computer with a USB cable. You can find where to get one on the <a href=\"#board\" data-go=\"board\">3D FPGA board page</a> (see \"Real boards you can get\")."}]},
+ {h:"Install the toolchain",b:[
+  {t:"p",html:"Download <b>OSS CAD Suite</b> from YosysHQ. It is one download that contains Yosys, nextpnr and the iCE40 tools (<code>icepack</code>, <code>iceprog</code>). <a href=\"https://github.com/YosysHQ/oss-cad-suite-build/releases/latest\" target=\"_blank\" rel=\"noopener\">Open the download page</a> and pick the file for your computer."},
+  {t:"os",mac:[{t:"p",html:"Unpack the download. In a terminal go into the unpacked <b>oss-cad-suite</b> folder and run this once to allow it to run on macOS:"},{t:"cmd",code:"./activate"},{t:"p",html:"Then, <b>every time you open a new terminal</b>, load the tools (change the path to where you unpacked it):"},{t:"cmd",code:"source ~/Downloads/oss-cad-suite/environment"}],
+      linux:[{t:"p",html:"Unpack the download, then <b>in every new terminal</b> load the tools (change the path to where you unpacked it):"},{t:"cmd",code:"source ~/oss-cad-suite/environment"}],
+      win:[{t:"p",html:"Unpack the download to a folder whose path has no spaces, then double-click <b>start.bat</b> inside the <b>oss-cad-suite</b> folder. It opens a terminal with all the tools ready."}]},
+  {t:"p",html:"Check that it worked:"},{t:"cmd",code:"yosys -V\nnextpnr-ice40 --version"}]},
+ {h:"Make a folder",b:[{t:"cmd",code:"mkdir blink-fpga\ncd blink-fpga"}]},
+ {h:"Write the design",b:[
+  {t:"p",html:"Save this as <b>blink.v</b>. The board's clock runs at 12 MHz. A 24-bit counter counts up on every tick, and its top bit flips about every 0.7 seconds, so the two LEDs take turns. The two LEDs turn <b>on</b> when their pin is <b>low</b>, which is why one is inverted with <code>~</code>. The module must be called <code>top</code> because the tools look for that name."},
+  {t:"file",name:"blink.v",lang:"v",code:['// blink.v: make the red and green LEDs take turns on the iCEBreaker board','module top (','    input  CLK,        // 12 MHz clock from the board','    output LEDR_N,     // red LED   (turns ON when the pin is LOW)','    output LEDG_N      // green LED (turns ON when the pin is LOW)',');','    reg [23:0] counter = 0;                 // a counter that keeps counting up','','    always @(posedge CLK)','        counter <= counter + 1;             // +1 on every clock tick','','    // The top bit of the counter flips about every 0.7 seconds','    assign LEDG_N = ~counter[23];           // green is on when the bit is 1','    assign LEDR_N =  counter[23];           // red is on when the bit is 0','endmodule'].join("\n")}]},
+ {h:"Tell the tools which pin is which",b:[
+  {t:"p",html:"Your code talks about <code>CLK</code> and <code>LEDR_N</code>, but the FPGA chip has dozens of physical pins. A <b>pin constraints file</b> connects the names to the pins. Save this as <b>icebreaker.pcf</b> (these numbers come from the official iCEBreaker examples):"},
+  {t:"file",name:"icebreaker.pcf",lang:"pcf",code:['# Which pin on the iCEBreaker is which','set_io -nowarn CLK     35','set_frequency CLK 12','set_io -nowarn LEDR_N  11','set_io -nowarn LEDG_N  37'].join("\n")}]},
+ {h:"Build it",b:[
+  {t:"p",html:"Three tools run one after another. Each one does a different job:"},
+  {t:"cmd",code:"yosys -q -p \"synth_ice40 -top top -json blink.json\" blink.v\nnextpnr-ice40 --up5k --package sg48 --json blink.json --pcf icebreaker.pcf --asc blink.asc\nicepack blink.asc blink.bin"},
+  {t:"ul",items:["<b>yosys</b> turns your code into gates (<i>synthesis</i>).","<b>nextpnr</b> decides where each gate sits inside the FPGA and how they're wired (<i>place and route</i>). It prints a long report and ends with a line like <i>Program finished normally</i>.","<b>icepack</b> converts the result into <b>blink.bin</b>, the <i>bitstream</i> file the board understands."]}]},
+ {h:"Send it to the board",b:[
+  {t:"cmd",code:"iceprog blink.bin"},
+  {t:"p",html:"It writes the design into the board. When it finishes, the board starts running it."},
+  {t:"warn",html:"On Linux, if it can't open the USB device, run it with <code>sudo iceprog blink.bin</code> or set up USB permissions as described in the iCEBreaker documentation."}]},
+ {h:"Watch it work",b:[
+  {t:"p",html:"The red and green LEDs on the board now take turns about every 0.7 seconds. That timing comes from the counter: the top bit flips every 2<sup>23</sup> = 8,388,608 ticks, and at 12,000,000 ticks per second that's about 0.7 seconds."},
+  {t:"p",html:"<b>If something is wrong:</b>"},
+  {t:"ul",items:["<b>Nothing is lit:</b> check the board is plugged in and that <b>iceprog</b> finished without errors.","<b>iceprog can't find the board:</b> try another USB cable or port, and see the Linux note above.","<b>nextpnr complains about a pin:</b> compare <b>icebreaker.pcf</b> with the file above, since a typo in a name is the usual cause."]}]},
+ {h:"Experiment!",b:[
+  {t:"ul",items:["Change <code>counter[23]</code> to <code>counter[21]</code> in both lines: the LEDs now swap about 4× faster (about every 0.17 s). Build and upload again.","<b>Challenge:</b> the board has a button on the main board called <code>BTN_N</code>. Add the line <code>set_io -nowarn BTN_N 10</code> to the pin file and make the LEDs blink only while you hold it. The button reads 0 when pressed."]}]}
+ ],
+ wrap:"You just took an idea all the way to real hardware using only free tools. This is the same flow professionals use, just smaller.",
+ next:["synth"],
+ more:[["Official iCEBreaker examples (Codeberg)","https://codeberg.org/icebreaker-fpga/icebreaker-verilog-examples"],["iCEBreaker project site","https://icebreaker-fpga.org"]]}
+];
+let guideId=null,guideOS=(()=>{const p=((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||navigator.userAgent||"").toLowerCase();return p.includes("mac")?"mac":p.includes("win")?"win":"linux"})();
+let copyStore=[];
+const OSN={mac:"macOS",linux:"Linux",win:"Windows"};
+function hlGuide(code,lang){
+  const e=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  return code.split("\n").map(ln=>{
+    if(lang==="spice"){if(/^\*/.test(ln))return `<span class="cm">${e(ln)}</span>`;if(/^\./.test(ln))return `<span class="kw">${e(ln)}</span>`;return e(ln)||"&nbsp;"}
+    if(lang==="pcf"){if(/^#/.test(ln))return `<span class="cm">${e(ln)}</span>`;return e(ln).replace(/^(set_io|set_frequency)/,'<span class="kw">$1</span>')||"&nbsp;"}
+    // verilog
+    const i=ln.indexOf("//");const c=i>=0?ln.slice(0,i):ln,cm=i>=0?ln.slice(i):"";
+    let h=e(c).replace(/\b(module|endmodule|input|output|reg|wire|assign|always|initial|posedge|begin|end|if|else)\b/g,'<span class="kw">$1</span>').replace(/(`timescale)/g,'<span class="kw">$1</span>');
+    return (h+(cm?`<span class="cm">${e(cm)}</span>`:""))||"&nbsp;";
+  }).map(l=>`<span class="ln">${l}</span>`).join("");
+}
+function gcopyBtn(text){copyStore.push(text);return `<button class="chip gcopy" data-ci="${copyStore.length-1}">Copy</button>`}
+function gblock(b){
+  switch(b.t){
+   case "p":return `<p>${b.html}</p>`;
+   case "ul":return `<ul class="gul">${b.items.map(i=>`<li>${i}</li>`).join("")}</ul>`;
+   case "tip":return `<div class="gcall tip">💡 ${b.html}</div>`;
+   case "warn":return `<div class="gcall warn">⚠️ ${b.html}</div>`;
+   case "pre":return `<pre class="gascii">${esc(b.text)}</pre>`;
+   case "file":return `<div class="gcode"><div class="gcode-h"><span>📄 ${esc(b.name)}</span>${gcopyBtn(b.code)}</div><pre>${hlGuide(b.code,b.lang)}</pre></div>`;
+   case "cmd":return `<div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span>${gcopyBtn(b.code)}</div><pre>${b.code.split("\n").map(l=>`<span class="tl">${esc(l)}</span>`).join("")}</pre></div>`;
+   case "out":return `<div class="gcode out"><div class="gcode-h"><span>👀 You should see</span></div><pre>${esc(b.text)}</pre></div>`;
+   case "os":return `<div class="gos"><div class="gos-tabs" role="tablist">${["mac","linux","win"].map(o=>`<button class="chip" data-os="${o}" aria-pressed="${o===guideOS}">${OSN[o]}</button>`).join("")}</div><div class="gos-body">${(b[guideOS]||[]).map(gblock).join("")}</div></div>`;
+  }
+  return "";
+}
+function renderGuides(){
+  const v=$("#v-guides");copyStore=[];
+  if(!guideId){
+    v.innerHTML=`<div class="hero"><h2>🛠️ Project guides</h2><p>Small hands-on projects, step by step. Each one tells you what to install, gives you the code to copy, shows what you should see, and ends with something to try yourself. <b>Start with the first one.</b></p></div>
+     <div class="goalgrid gguides">${GUIDES.map((g,i)=>`<button class="goalcard gcard" data-g="${g.id}"><span class="gi">${g.emoji}</span><b>${i+1}. ${g.title}</b><small>${g.blurb}</small><span class="gmeta"><span class="tag ${g.level==="Beginner"?"open":"web"}">${g.level}</span><span>⏱ ${g.time}</span></span><span class="gneeds">🧰 ${g.needs}</span></button>`).join("")}</div>
+     <p class="secsub" style="margin-top:18px">The first three need nothing but your computer. The commands were run before being written here, but tool versions change, so if something differs, check the tool's own website.</p>`;
+    v.querySelectorAll(".gcard").forEach(b=>b.onclick=()=>openGuide(b.dataset.g));
+    return;
+  }
+  const g=GUIDES.find(x=>x.id===guideId),idx=GUIDES.indexOf(g);
+  v.innerHTML=`<button class="chip gback" id="gback">← All guides</button>
+   <div class="hero"><h2>${g.emoji} ${g.title}</h2><p>${g.blurb}</p>
+    <div class="gmeta"><span class="tag ${g.level==="Beginner"?"open":"web"}">${g.level}</span><span>⏱ ${g.time}</span><span>🧰 ${g.needs}</span></div>
+    <p class="gl-h">You'll learn:</p><ul class="gul">${g.learn.map(l=>`<li>${l}</li>`).join("")}</ul>
+    ${g.note?`<div class="gcall warn">ℹ️ ${g.note}</div>`:""}</div>
+   <div class="road">${g.steps.map((s,i)=>`<div class="step" data-n="${i+1}"><h3>${s.h}</h3>${s.b.map(gblock).join("")}</div>`).join("")}</div>
+   <div class="gwrap"><h3>🎉 What just happened</h3><p>${g.wrap}</p>
+    ${g.more?`<div class="links">${g.more.map(m=>`<a href="${m[1]}" target="_blank" rel="noopener">↗ ${m[0]}</a>`).join("")}</div>`:""}
+    <p class="gl-h">Next up:</p><div class="gnext">${g.next.map(n=>{const x=GUIDES.find(q=>q.id===n);return `<button class="chip" data-g="${x.id}">${x.emoji} ${x.title}</button>`}).join("")}<button class="chip" id="gall">All guides</button></div></div>`;
+  $("#gback").onclick=$("#gall").onclick=()=>openGuide(null);
+  v.querySelectorAll(".gnext [data-g]").forEach(b=>b.onclick=()=>openGuide(b.dataset.g));
+}
+document.addEventListener("click",e=>{
+  const c=e.target.closest&&e.target.closest("#v-guides .gcopy");
+  if(c){const t=copyStore[+c.dataset.ci];const done=()=>{c.textContent="Copied ✓";setTimeout(()=>c.textContent="Copy",1600)};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,()=>{c.textContent="Select and copy by hand"})}
+    else{const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done()}catch(_){c.textContent="Select and copy by hand"}ta.remove()}
+    return}
+  const o=e.target.closest&&e.target.closest("#v-guides [data-os]");
+  if(o){guideOS=o.dataset.os;const y=scrollY;renderGuides();window.scrollTo(0,y);return}
+  const go=e.target.closest&&e.target.closest("#v-guides a[data-go]");
+  if(go){e.preventDefault();showView(go.dataset.go)}
+});
+
 /* ---------- tabs ---------- */
-function showView(v){
+/* ---------- Section addresses: every section has its own link, and Back / Forward work ---------- */
+const FULL_TITLE=document.title;
+const HASH_VIEWS={start:"start",steps:"flow",map:"diagram",board:"board",guides:"guides",choose:"pick",words:"words"};
+const VIEW_HASH={start:"start",flow:"steps",diagram:"map",board:"board",guides:"guides",pick:"choose",words:"words"};
+const VIEW_TITLE={flow:"Steps",diagram:"Map",board:"3D FPGA board",guides:"Project guides",pick:"Help me choose",words:"Words explained"};
+const TRACK_SLUG={ASIC:"asic",FPGA:"fpga",Analog:"analog"};
+let curView="start";
+function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderFlow();renderDiagram()}
+function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="flow"||v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;return h}
+function pageTitle(){
+  if(curView==="start")return FULL_TITLE;
+  if(curView==="guides"&&guideId){const g=GUIDES.find(x=>x.id===guideId);if(g)return g.title+" \u00b7 Chip Flow Atlas"}
+  return VIEW_TITLE[curView]+" \u00b7 Chip Flow Atlas";
+}
+function syncUrl(replace){
+  document.title=pageTitle();
+  const h=hashFor(curView);
+  if(curView==="start"&&!location.hash)return;      // keep the plain address for the home page
+  if(location.hash===h)return;
+  (replace?history.replaceState:history.pushState).call(history,null,"",h);
+}
+function openGuide(id){guideId=id;renderGuides();window.scrollTo(0,0);syncUrl()}
+function route(){
+  const parts=location.hash.replace(/^#\/?/,"").split("/");
+  const v=HASH_VIEWS[parts[0]]||"start";
+  if((v==="flow"||v==="diagram")&&parts[1]){
+    const k=Object.keys(TRACK_SLUG).find(x=>TRACK_SLUG[x]===parts[1].toLowerCase());
+    if(k&&k!==track)setTrack(k);
+  }
+  if(v==="guides"){guideId=GUIDES.some(g=>g.id===parts[1])?parts[1]:null;renderGuides()}
+  showView(v,true);
+}
+function showView(v,fromRoute){
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
-  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
   $("#tracks").hidden=!(v==="flow"||v==="diagram");
   $("#side").classList.remove("open");window.scrollTo(0,0);
+  curView=v;syncUrl(!!fromRoute);
 }
 $("#menu").onclick=()=>$("#side").classList.toggle("open");
 const closeMenu=()=>$("#side").classList.remove("open");
@@ -1415,7 +1678,7 @@ function renderBoard(){
   window.addEventListener("resize",fitBoard);
 }
 
-renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();$("#fpgaBanner").onclick=()=>showView("board");showView("start");
+renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();renderGuides();$("#fpgaBanner").onclick=()=>showView("board");window.addEventListener("hashchange",route);route();
 </script>
 </body>
 </html>
