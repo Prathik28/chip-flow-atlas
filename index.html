@@ -573,6 +573,11 @@ footer{margin-top:48px}
 .gwrap h3{margin:0 0 4px;font-size:20px}
 .gnext{display:flex;gap:8px;flex-wrap:wrap}
 .gnext .chip{cursor:pointer}
+
+/* ---- "Do this as a guide" buttons on the learning paths ---- */
+.gbtn{display:inline-block;margin-top:10px;padding:7px 16px;background:#b8f2c8;color:var(--ink);border:2.5px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink);font-weight:800;font-size:14.5px;text-decoration:none;transition:transform .12s,box-shadow .12s}
+.gbtn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink);background:#9be8b0}
+.gbtn:active{transform:translate(2px,2px);box-shadow:none}
 </style>
 </head>
 <body>
@@ -829,19 +834,19 @@ const ROADS={
  fpga:{label:"Play with an FPGA board",desc:"Fastest way to see your own hardware working. Cheap, reversible, no factory needed.",steps:[
   {t:"Learn what gates and flip-flops are",why:"Everything else builds on this. Do it visually first — no code yet.",links:[["CircuitVerse (build circuits in browser)","https://circuitverse.org"],["Nand2Tetris (build a computer from NAND gates)","https://www.nand2tetris.org"]],out:"You can explain AND/OR/NOT gates, a flip-flop, and a clock."},
   {t:"Write your first Verilog — no installation",why:"Practise tiny exercises and get instant pass/fail feedback.",links:[["HDLBits","https://hdlbits.01xz.net"],["EDA Playground (run a simulator in the browser)","https://www.edaplayground.com"]],out:"You can write an adder, counter and simple state machine."},
-  {t:"Install a simulator on your computer",why:"So you can work offline on bigger projects and view waveforms.",tools:["Icarus Verilog","GTKWave"],out:"You run a testbench and see signals in the waveform viewer."},
-  {t:"Get an FPGA board and the toolchain",why:"Lattice iCE40 boards work with a completely free toolchain; AMD and Intel boards use their free vendor tools.",tools:["Yosys","nextpnr","openFPGALoader","Vivado","Quartus"],links:[["Nandland FPGA tutorials","https://nandland.com"]],out:"An LED blinks because of Verilog you wrote."},
+  {t:"Install a simulator on your computer",guide:"sim",why:"So you can work offline on bigger projects and view waveforms.",tools:["Icarus Verilog","GTKWave"],out:"You run a testbench and see signals in the waveform viewer."},
+  {t:"Get an FPGA board and the toolchain",guide:"fpga",why:"Lattice iCE40 boards work with a completely free toolchain; AMD and Intel boards use their free vendor tools.",tools:["Yosys","nextpnr","openFPGALoader","Vivado","Quartus"],links:[["Nandland FPGA tutorials","https://nandland.com"]],out:"An LED blinks because of Verilog you wrote."},
   {t:"Debug on real hardware",why:"When it doesn't work, you need to see the real signals.",tools:["Sigrok / PulseView","Logic analyzer"],links:[["ZipCPU blog (deeper FPGA design)","https://zipcpu.com"]],out:"You can capture and decode a real signal."}]},
  asic:{label:"Make a real chip (ASIC)",desc:"Follow the same flow as industry, with free tools and a free open process.",steps:[
   {t:"Learn digital logic",why:"Gates, flip-flops, clocks — the vocabulary of everything else.",links:[["CircuitVerse","https://circuitverse.org"],["Nand2Tetris","https://www.nand2tetris.org"]],out:"You understand how logic becomes a computer."},
-  {t:"Write and test Verilog",why:"Your chip starts as code. Test it before anything else.",links:[["HDLBits","https://hdlbits.01xz.net"],["EDA Playground","https://www.edaplayground.com"]],tools:["Icarus Verilog","GTKWave","cocotb"],out:"A small design with a passing testbench."},
-  {t:"Turn it into gates (synthesis)",why:"See which real cells your code becomes, and how big it is.",tools:["Yosys"],out:"A gate-level netlist and an area/cell report."},
+  {t:"Write and test Verilog",guide:"sim",why:"Your chip starts as code. Test it before anything else.",links:[["HDLBits","https://hdlbits.01xz.net"],["EDA Playground","https://www.edaplayground.com"]],tools:["Icarus Verilog","GTKWave","cocotb"],out:"A small design with a passing testbench."},
+  {t:"Turn it into gates (synthesis)",guide:"synth",why:"See which real cells your code becomes, and how big it is.",tools:["Yosys"],out:"A gate-level netlist and an area/cell report."},
   {t:"Run the whole flow with OpenLane",why:"One command runs synthesis, placement, routing and checks. The best way to see the complete picture.",tools:["OpenLane","OpenROAD"],links:[["Zero to ASIC course","https://zerotoasiccourse.com"]],out:"A finished layout file (GDSII) of your design."},
   {t:"Look at and check your layout",why:"Inspect the real shapes and confirm the design rules pass.",tools:["KLayout","Magic","Netgen"],out:"You can zoom into your chip and read DRC/LVS reports."},
   {t:"Submit it to be fabricated",why:"Community shuttles make a tiny real chip affordable.",tools:["Tiny Tapeout"],out:"Your design on a real chip."}]},
  analog:{label:"Design analog circuits",desc:"Amplifiers, filters, references — the continuous-voltage side of chips.",steps:[
   {t:"Get comfortable with basic circuits",why:"Voltage, current, resistors, capacitors, diodes, transistors.",links:[["Falstad circuit simulator (in browser)","https://www.falstad.com/circuit/"]],out:"You can predict what a simple RC or amplifier circuit will do."},
-  {t:"Run your first SPICE simulation",why:"SPICE is the standard way to test a circuit virtually.",tools:["ngspice"],out:"A plotted voltage waveform of a circuit you described."},
+  {t:"Run your first SPICE simulation",guide:"spice",why:"SPICE is the standard way to test a circuit virtually.",tools:["ngspice"],out:"A plotted voltage waveform of a circuit you described."},
   {t:"Draw schematics properly",why:"Use a real schematic editor that exports to the simulator.",tools:["Xschem"],out:"A schematic you can simulate."},
   {t:"Draw the layout and check it",why:"Turn the schematic into physical shapes and verify the rules.",tools:["Magic","KLayout","Netgen"],out:"A DRC/LVS-clean layout."},
   {t:"Re-simulate with real wiring",why:"Wire resistance and capacitance change real-world behaviour.",tools:["Magic","ngspice"],out:"Before-and-after layout results to compare."}]}
@@ -919,7 +924,7 @@ function renderStart(){
     const tl=(s.tools||[]).map(n=>{const inf=INFO.find(x=>x.name===n);return inf&&inf.site?`<a href="${inf.site}" target="_blank" rel="noopener">↗ ${esc(inf.name)}</a>`:""});
     const ll=(s.links||[]).map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">📖 ${l[0]}</a>`);
     const names=(s.tools||[]).map(n=>{const inf=INFO.find(x=>x.name===n);return inf?`<li><b>${esc(inf.name)}</b> — ${inf.plain}</li>`:""}).join("");
-    return `<div class="step" data-n="${i+1}"><h3>${s.t}</h3><p>${s.why}</p>${names?`<ul style="margin:6px 0;padding-left:18px;font-size:14.5px">${names}</ul>`:""}<div class="links">${tl.concat(ll).join("")}</div><p class="out">✓ You'll have: ${s.out}</p></div>`;
+    return `<div class="step" data-n="${i+1}"><h3>${s.t}</h3><p>${s.why}</p>${names?`<ul style="margin:6px 0;padding-left:18px;font-size:14.5px">${names}</ul>`:""}<div class="links">${tl.concat(ll).join("")}</div><p class="out">✓ You'll have: ${s.out}</p>${s.guide?`<a class="gbtn" href="#guides/${s.guide}">🛠️ Do this as a guide: ${GUIDES.find(g=>g.id===s.guide).title} →</a>`:""}</div>`;
   }).join("");
   v.innerHTML=`
    <div class="hero"><h2>👋 Welcome!</h2>
