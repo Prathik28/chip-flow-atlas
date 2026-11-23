@@ -460,6 +460,84 @@ footer{margin-top:48px}
 @media(max-width:560px){
   .hovername{top:50px;bottom:auto;left:12px;transform:none;font-size:14px;max-width:calc(100% - 24px)}
 }
+
+/* ---- animated chip journey ---- */
+.journey{margin-top:18px}
+.jtrack{position:relative;display:grid;grid-template-columns:repeat(6,1fr);padding-top:50px}
+.jline{position:absolute;left:calc(100%/12);right:calc(100%/12);top:69px;height:8px;background:#fff;border:2.5px solid var(--ink);border-radius:99px;overflow:hidden}
+.jline i{display:block;height:100%;width:0;background:#51cf66;transition:width .9s ease}
+.jstop{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;cursor:pointer;font:inherit;color:var(--ink);padding:0}
+.jstop .je{width:46px;height:46px;border-radius:50%;border:2.5px solid var(--ink);background:#fff;display:grid;place-items:center;font-size:22px;transition:transform .3s,background .3s}
+.jstop small{font-weight:800;font-size:12px}
+.jstop.done .je{background:#b8f2c8}
+.jstop.cur .je{background:#ffe27a;transform:scale(1.18)}
+.jstop:hover .je{transform:scale(1.1)}
+.jchip{position:absolute;top:0;left:8.33%;width:44px;height:44px;transform:translateX(-50%);transition:left .9s cubic-bezier(.45,.05,.3,1.15);z-index:3;pointer-events:none}
+.jchip svg{width:100%;height:100%;display:block;filter:drop-shadow(2px 3px 0 rgba(36,28,58,.3))}
+.jchip.hop svg{animation:hop .9s}
+@keyframes hop{0%{transform:translateY(0)}35%{transform:translateY(-14px) rotate(-8deg)}70%{transform:translateY(0) rotate(6deg)}100%{transform:none}}
+.jstage{display:grid;grid-template-columns:250px 1fr;gap:14px;margin-top:16px;align-items:stretch}
+.jscene{background:#fff7e6;border:2.5px solid var(--ink);border-radius:16px;min-height:140px;display:grid;place-items:center;padding:10px;overflow:hidden}
+.jsay{background:#fff1cf;border:2.5px solid var(--ink);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.jsay p{margin:0;font-size:17px;font-weight:700;line-height:1.45}
+.jctrl{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#jcount{font-weight:800;color:var(--accent);font-size:14px}
+.jbtns{display:flex;gap:6px}
+.jbtns .chip{padding:4px 12px;font-size:14px;cursor:pointer}
+/* scenes */
+.sc-idea{display:flex;align-items:center;gap:10px}
+.bulb{font-size:54px;animation:glow 1.1s ease-in-out infinite alternate}
+@keyframes glow{from{transform:scale(1);filter:drop-shadow(0 0 0 #ffd43b)}to{transform:scale(1.15);filter:drop-shadow(0 0 14px #ffd43b)}}
+.bub{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:6px 10px;font-weight:800;font-size:14px;animation:pop .5s both}
+@keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.sc-code{margin:0;background:#241c3a;color:#e9e4ff;border-radius:12px;padding:14px;font:13px ui-monospace,Menlo,Consolas,monospace}
+.typing{display:inline-block;overflow:hidden;white-space:nowrap;width:0;vertical-align:bottom;border-right:2px solid #ffd43b;animation:typing 2.2s steps(25) forwards,caret .6s step-end infinite}
+@keyframes typing{to{width:25ch}}
+@keyframes caret{50%{border-right-color:transparent}}
+.sc-test{display:flex;flex-direction:column;align-items:center;gap:6px}
+.sc-wave{width:200px}
+.sc-wave polyline{fill:none;stroke:#5b4bdb;stroke-width:4;stroke-linejoin:round;stroke-dasharray:700;stroke-dashoffset:700;animation:draw 2.2s linear forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.ok{font-weight:800;color:#13854d;animation:pop .4s 2.2s both}
+.sc-gate,.sc-lay{width:210px}
+.gl{font:800 13px Nunito,sans-serif;fill:#241c3a}.gl2{font-size:12px}
+.dot{fill:#5b4bdb;animation:runin 1.4s linear infinite}
+.dot.d3{animation-name:runout;animation-delay:.7s}
+@keyframes runin{0%{transform:translateX(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateX(48px);opacity:0}}
+@keyframes runout{0%{transform:translateX(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateX(62px);opacity:0}}
+.w{stroke-dasharray:1;stroke-dashoffset:1;animation:draw1 .7s ease forwards}
+.w1{animation-delay:.2s}.w2{animation-delay:.6s}.w3{animation-delay:1s}.w4{animation-delay:1.4s}.w5{animation-delay:1.8s}.w6{animation-delay:2.2s}
+@keyframes draw1{to{stroke-dashoffset:0}}
+.sc-fact{display:flex;align-items:center;gap:8px;font-size:46px}
+.belt{position:relative;width:90px;height:16px;border:2.5px solid var(--ink);border-radius:99px;background:#fff;overflow:hidden}
+.belt i{position:absolute;top:2px;left:-14px;width:10px;height:8px;background:#5b4bdb;border-radius:2px;animation:belt 2s linear infinite}
+.belt i:nth-child(2){animation-delay:.5s}.belt i:nth-child(3){animation-delay:1s}.belt i:nth-child(4){animation-delay:1.5s}
+@keyframes belt{to{transform:translateX(110px)}}
+@media(max-width:620px){
+  .jstage{grid-template-columns:1fr}
+  .jstop small{font-size:10.5px}
+  .jstop .je{width:40px;height:40px;font-size:19px}
+  .jline{top:66px}
+  .jchip{width:38px;height:38px}
+}
+@media(prefers-reduced-motion:reduce){
+  .journey *{animation:none!important;transition:none!important}
+  .typing{width:auto;border-right:0}
+  .sc-wave polyline{stroke-dashoffset:0}
+  .w{stroke-dashoffset:0}
+  .bub,.ok{opacity:1}
+}
+
+/* ---- Map: details scroll into view ---- */
+#dpanel{scroll-margin-top:14px}
+#v-diagram .hint{scroll-margin-top:14px}
+.dback{display:block;margin:16px 0 0;cursor:pointer;font-size:14px;padding:6px 14px}
+
+/* ---- Map boxes: lift on hover like the cards ---- */
+.dbox{transition:transform .15s ease,filter .15s ease;filter:drop-shadow(3px 3px 0 var(--ink))}
+.dbox:hover,.dbox:focus-visible{transform:translate(-2px,-4px);filter:drop-shadow(6px 8px 0 var(--ink))}
+.dbox:active{transform:translate(2px,2px);filter:drop-shadow(1px 1px 0 var(--ink))}
+@media(prefers-reduced-motion:reduce){.dbox{transition:none}.dbox:hover,.dbox:focus-visible{transform:none}}
 </style>
 </head>
 <body>
@@ -750,6 +828,52 @@ const GLOSS=[
  ["Waveform","A graph of signals changing over time, used to debug."]
 ];
 let goal="fpga";
+/* ---------- Animated chip journey (Start page) ---------- */
+const CHIP_FACE='<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="3" y="3" width="58" height="58" rx="15" fill="#ffe27a" stroke="#241c3a" stroke-width="4"/><path d="M24 10v8M32 10v8M40 10v8M24 46v8M32 46v8M40 46v8M10 24h8M10 32h8M10 40h8M46 24h8M46 32h8M46 40h8" stroke="#241c3a" stroke-width="4" stroke-linecap="round"/><rect x="17" y="17" width="30" height="30" rx="6" fill="#5b4bdb" stroke="#241c3a" stroke-width="4"/><circle cx="26" cy="29" r="3.5" fill="#fff"/><circle cx="38" cy="29" r="3.5" fill="#fff"/><path d="M25 38q7 6 14 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
+const JSTOPS=[
+ {e:"💡",n:"Idea",t:"Every chip starts as an idea: what should it do? Here, a light that blinks.",
+  s:()=>'<div class="sc-idea"><span class="bulb">💡</span><div class="bub">“I want a light that blinks!”</div></div>'},
+ {e:"⌨️",n:"Code",t:"You describe the idea in code (Verilog). It's like writing the chip's recipe.",
+  s:()=>'<pre class="sc-code"><span class="typing">assign led = btn0 &amp; btn1;</span></pre>'},
+ {e:"🔬",n:"Test",t:"Before building anything, you test it in a simulator and watch the signals on a waveform.",
+  s:()=>'<div class="sc-test"><svg class="sc-wave" viewBox="0 0 220 70"><polyline points="0,58 30,58 30,14 70,14 70,58 110,58 110,14 150,14 150,58 190,58 190,14 220,14"/></svg><div class="ok">✔ Test passed!</div></div>'},
+ {e:"🔩",n:"Gates",t:"A tool called synthesis turns your code into real logic gates, like this AND gate.",
+  s:()=>'<svg class="sc-gate" viewBox="0 0 220 90"><g fill="none" stroke="#241c3a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 30H70M22 60H70M135 45H198"/><path d="M70 15H105A30 30 0 0 1 105 75H70Z" fill="#ffe27a"/></g><text x="2" y="25" class="gl">A</text><text x="2" y="75" class="gl">B</text><text x="204" y="50" class="gl">Y</text><text x="78" y="50" class="gl gl2">AND</text><circle class="dot d1" cx="22" cy="30" r="5"/><circle class="dot d1" cx="22" cy="60" r="5"/><circle class="dot d3" cx="135" cy="45" r="5"/></svg>'},
+ {e:"🗺️",n:"Layout",t:"Next, every gate gets a place on the chip and wires are drawn to connect them.",
+  s:()=>'<svg class="sc-lay" viewBox="0 0 220 90"><g fill="#b197fc" stroke="#241c3a" stroke-width="3"><rect x="14" y="12" width="40" height="24" rx="5"/><rect x="90" y="12" width="40" height="24" rx="5"/><rect x="166" y="12" width="40" height="24" rx="5"/><rect x="14" y="56" width="40" height="24" rx="5"/><rect x="90" y="56" width="40" height="24" rx="5"/><rect x="166" y="56" width="40" height="24" rx="5"/></g><g fill="none" stroke="#ff8a3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path class="w w1" pathLength="1" d="M54 24H90"/><path class="w w2" pathLength="1" d="M130 24H166"/><path class="w w3" pathLength="1" d="M34 36V56"/><path class="w w4" pathLength="1" d="M110 36V56"/><path class="w w5" pathLength="1" d="M130 68H166"/><path class="w w6" pathLength="1" d="M186 36V56"/></g></svg>'},
+ {e:"🏭",n:"Factory",t:"The finished layout goes to a factory that prints it onto silicon. Your chip is real!",
+  s:()=>'<div class="sc-fact"><span class="fe">🏭</span><div class="belt"><i></i><i></i><i></i><i></i></div><span class="fe">📦</span></div>'}
+];
+let jStep=0,jTimer=null,jPlaying=!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
+function jRender(){
+  const j=$("#journey");if(!j)return;
+  j.querySelectorAll(".jstop").forEach((b,i)=>{b.classList.toggle("done",i<jStep);b.classList.toggle("cur",i===jStep);b.setAttribute("aria-current",i===jStep)});
+  $("#jfill").style.width=(jStep/(JSTOPS.length-1)*100)+"%";
+  const chip=$("#jchip");chip.style.left=((jStep+.5)/JSTOPS.length*100)+"%";
+  chip.classList.remove("hop");void chip.offsetWidth;chip.classList.add("hop");
+  const S=JSTOPS[jStep];
+  $("#jscene").innerHTML=S.s();$("#jtext").textContent=S.t;$("#jcount").textContent=`Step ${jStep+1} of ${JSTOPS.length}: ${S.n}`;
+  $("#jplay").textContent=jPlaying?"⏸ Pause":"▶ Play";
+}
+function jRestart(){
+  clearInterval(jTimer);
+  if(jPlaying)jTimer=setInterval(()=>{if($("#v-start").hidden||document.hidden)return;jStep=(jStep+1)%JSTOPS.length;jRender()},4800);
+}
+function jGo(i){jStep=(i+JSTOPS.length)%JSTOPS.length;jRender();jRestart()}
+function initJourney(){
+  const j=$("#journey");if(!j)return;
+  j.innerHTML=`<div class="jtrack"><div class="jline"><i id="jfill"></i></div>
+    ${JSTOPS.map((s,i)=>`<button class="jstop" data-i="${i}" aria-label="${s.n}"><span class="je">${s.e}</span><small>${s.n}</small></button>`).join("")}
+    <div class="jchip" id="jchip">${CHIP_FACE}</div></div>
+   <div class="jstage"><div class="jscene" id="jscene" aria-hidden="true"></div>
+    <div class="jsay"><p id="jtext" aria-live="polite"></p>
+     <div class="jctrl"><span id="jcount"></span><span class="jbtns"><button class="chip" id="jprev" aria-label="Previous step">◀</button><button class="chip" id="jplay"></button><button class="chip" id="jnext" aria-label="Next step">▶</button></span></div></div></div>`;
+  j.querySelectorAll(".jstop").forEach(b=>b.onclick=()=>jGo(+b.dataset.i));
+  $("#jprev").onclick=()=>jGo(jStep-1);$("#jnext").onclick=()=>jGo(jStep+1);
+  $("#jplay").onclick=()=>{jPlaying=!jPlaying;jRender();jRestart()};
+  jRender();jRestart();
+}
+
 const GOAL_ICON={fpga:"💡",asic:"🏭",analog:"〰️"};
 function renderStart(){
   const v=$("#v-start");
@@ -763,7 +887,7 @@ function renderStart(){
   v.innerHTML=`
    <div class="hero"><h2>👋 Welcome!</h2>
     <p>Every chip goes on the same journey. Pick what you want to do and we'll show you <b>what to learn, which tool to use, and where to learn it</b>.</p>
-    <div class="mini"><span class="s">💡 Idea</span><span class="a">→</span><span class="s">⌨️ Code</span><span class="a">→</span><span class="s">🔬 Test</span><span class="a">→</span><span class="s">🔩 Gates</span><span class="a">→</span><span class="s">🗺️ Layout</span><span class="a">→</span><span class="s">🏭 Factory</span></div>
+    <div class="journey" id="journey"></div>
    </div>
    <h2 class="sec">1 · What do you want to do?</h2>
    <div class="goalgrid">${Object.keys(ROADS).map(k=>`<button class="goalcard" data-g="${k}" aria-pressed="${k===goal}"><span class="gi">${GOAL_ICON[k]}</span><b>${ROADS[k].label}</b><small>${ROADS[k].desc}</small><em>${ROADS[k].steps.length} steps</em></button>`).join("")}</div>
@@ -776,6 +900,7 @@ function renderStart(){
     <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
     <button class="tile" data-go="words"><span>📖</span><b>Words explained</b><small>RTL, GDSII, tape-out… in plain English</small></button>
    </div>`;
+  initJourney();
   v.querySelectorAll(".goalcard").forEach(b=>b.onclick=()=>{goal=b.dataset.g;renderStart();$("#pathTitle").scrollIntoView({behavior:"smooth",block:"start"})});
   v.querySelectorAll(".tile").forEach(b=>b.onclick=()=>showView(b.dataset.go));
 }
@@ -941,8 +1066,9 @@ function renderDiagram(){
   });
   const svg=$("#dsvg");svg.setAttribute("viewBox",`0 0 ${VW} ${VH}`);svg.innerHTML=s;
   svg.querySelectorAll(".dbox").forEach(g=>{
-    const pick=()=>{sel=+g.dataset.i;renderDiagram()};
-    g.onclick=pick;g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();$("#dsvg .dbox.sel").focus()}};
+    // after picking a box, scroll down to its details so they are always in view
+    const pick=()=>{sel=+g.dataset.i;renderDiagram();requestAnimationFrame(()=>{const d=$("#dpanel");if(d)d.scrollIntoView({behavior:"smooth",block:"start"})})};
+    g.onclick=pick;g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();const b=$("#dsvg .dbox.sel");if(b)b.focus({preventScroll:true})}};
   });
   const x=st[sel];
   const p=$("#dpanel");p.style.setProperty("--pc",`var(${PH[x.ph][1]})`);
@@ -952,6 +1078,8 @@ function renderDiagram(){
     <div class="io"><h4>Inputs → outputs</h4><div><b>In:</b> ${x.inp}</div><div><b>Out:</b> ${x.out}</div>
     ${back[sel]!=null?`<div class="fail" style="margin-top:12px">↩ Loops back to step ${back[sel]+1} (${esc(st[back[sel]].t)})${x.fail?": "+x.fail.replace(/^.*?→\s*/,""):""}</div>`:""}</div>
    </div></div>`;
+  p.insertAdjacentHTML("beforeend",'<button class="chip dback" id="dback">⬆ Back to the map</button>');
+  $("#dback").onclick=()=>$("#v-diagram .hint").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 /* ---------- tabs ---------- */
