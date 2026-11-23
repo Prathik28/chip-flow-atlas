@@ -1,8 +1,10 @@
 # 🧩 Chip Flow Atlas
 
+[![guides](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml) [![links](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml)
+
 A fun, beginner-friendly guide to **how computer chips are designed**: which tool is used, when, and where to learn it.
 
-**🌐 Live site: https://prathik28.github.io/chip-flow-atlas/**
+**🌐 Live site: https://chip-flow-atlas.web.app**
 
 When I was a beginner, I struggled to understand which website does what and where to start. This site is the guide I wish I'd had.
 
@@ -52,6 +54,20 @@ Then visit `http://localhost:8000`.
 - The sample programs use a simplified step-by-step simulation to show what each piece of Verilog does. It is not a real Verilog simulator.
 - Tool names are examples of common choices, not an exhaustive or ranked list. Commercial EDA licenses and foundry PDKs vary by company and process node. Prices and availability of boards change, so check the seller's page.
 - Fonts (Fredoka and Nunito) load from Google Fonts. If they can't load, the site falls back to a plain rounded system font.
+
+## Automatic checks
+
+Two checks run on GitHub, and the badges at the top show their latest result:
+
+- **guides**: runs the code and commands from every project guide (Icarus Verilog, Yosys and ngspice) and checks they still give the results the guides promise. It runs on every push.
+- **links**: checks that every web link in the site and this README still works. It runs every Monday and whenever the page or README changes. Sites that refuse automated checks (for example LinkedIn) only produce a warning, not a failure.
+
+You can run both yourself:
+
+```bash
+node scripts/check-guides.mjs   # needs iverilog, yosys and ngspice installed
+node scripts/check-links.mjs
+```
 
 ## License
 

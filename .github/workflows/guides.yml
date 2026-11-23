@@ -1,0 +1,25 @@
+name: guides
+
+# Runs the code and commands from the website's project guides and checks they still work.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guides:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the tools used in the guides
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog yosys ngspice
+
+      - name: Run the guides
+        run: node scripts/check-guides.mjs

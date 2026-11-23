@@ -1,0 +1,26 @@
+name: links
+
+# Checks that every web link in the site and the README still works.
+# Runs every Monday, whenever the page or README changes, and on demand.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - README.md
+      - scripts/check-links.mjs
+      - .github/workflows/links.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the links
+        run: node scripts/check-links.mjs
