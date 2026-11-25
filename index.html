@@ -562,8 +562,8 @@ footer{margin-top:48px}
 .gcode pre{margin:0;padding:10px 0;color:#e9e4ff;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
 .gcode pre .ln{padding:0 14px}
 .gcode.out pre{padding:10px 14px;white-space:pre}
-.tl{display:block;padding:0 14px;white-space:pre}
-.tl::before{content:"$ ";color:#7dd3fc;user-select:none}
+.cl{display:block;padding:0 14px;white-space:pre}          /* one line in a "Terminal" box */
+.cl::before{content:"$ ";color:#7dd3fc;user-select:none}
 .gascii{margin:10px 0;background:#fff7e6;border:2px dashed var(--ink);border-radius:12px;padding:10px 14px;font:13.5px/1.4 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
 .gos{margin:10px 0;border:2px dashed var(--ink);border-radius:14px;padding:10px 12px;background:#fffdf6}
 .gos-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
@@ -591,6 +591,102 @@ footer{margin-top:48px}
 .cmain pre .ln{white-space:pre;border-left:0}
 #v-code .secsub code{background:#fff1cf;border:1.5px solid var(--ink);border-radius:6px;padding:0 6px;font:13.5px ui-monospace,Menlo,monospace}
 #v-code .gascii{font-size:12.5px;white-space:pre}
+
+/* ---- colour key above the Map ---- */
+.pkey{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;max-width:960px;margin:0 auto 10px}
+.pkey li{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:5px 14px;font:600 15px Fredoka,Nunito,sans-serif}
+.pkey i{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink);flex:none}
+@media(max-width:560px){.pkey{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pkey li{font-size:13px;padding:5px 9px;gap:6px;border-radius:12px}}
+
+/* ---- Learn STA: page ---- */
+.sta-card{position:relative}
+.sta-no{position:absolute;top:10px;right:12px;width:28px;height:28px;border-radius:50%;border:2px solid var(--ink);background:#ffe27a;display:grid;place-items:center;font-weight:800;font-size:13px}
+.sta-start,.sta-next{background:#ffe27a!important;cursor:pointer}
+.sta-meta{font-weight:800;color:var(--accent);font-size:13.5px}
+.sta-hero h2{margin-top:4px}
+.sta-idea{font-size:19px;font-weight:700}
+.sta-lab{margin-top:16px;background:#fff;border:2.5px solid var(--ink);border-radius:20px;box-shadow:var(--pop);padding:16px}
+.sta-scroll{overflow-x:auto;border:2px solid var(--ink);border-radius:14px;background:#fffdf7}
+.sta-stage{max-width:760px;margin:0 auto;padding:8px}
+.sta-stage svg{display:block;width:100%;height:auto}
+.sta-swipe{display:none;margin:4px 0 0;font-size:12.5px;color:var(--muted);font-weight:700}
+.sta-player{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.sta-player .chip,.sta-opts .chip,.sta-toggles .chip,.sta-form .chip,.sta-nav .chip{cursor:pointer}
+.sta-player input{flex:1;min-width:150px;accent-color:var(--accent)}
+.sta-say{min-height:48px;margin:10px 0;padding:10px 14px;background:#e5dbff;border:2px solid var(--ink);border-radius:12px;font-weight:700;font-size:15.5px}
+.sta-opts,.sta-toggles{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.sta-toggles{margin:12px 0 0}
+.sta-sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px 18px}
+.sta-sliders label{display:block;font-weight:800;font-size:14px}
+.sta-sliders label span{display:flex;justify-content:space-between;gap:8px}
+.sta-sliders output{color:var(--accent);white-space:nowrap}
+.sta-sliders input{width:100%;accent-color:var(--accent)}
+.sta-verdict{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:12px 14px;border:2.5px solid var(--ink);border-radius:14px;font-weight:700}
+.sta-verdict>b{font-size:20px;line-height:1.2}
+.sta-verdict ol{margin:6px 0 0;padding-left:20px}
+.sta-pass{background:#d3f9d8}.sta-fail{background:#ffe3e3}
+.sta-pre{white-space:pre;padding:10px 14px!important}
+.sta-points{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:14px 18px 14px 38px;margin:6px 0}
+.sta-points li{margin:6px 0}
+.sta-points code{background:#fff1cf;border:1.5px solid var(--ink);border-radius:6px;padding:0 5px;font:13.5px ui-monospace,Menlo,monospace}
+.sta-remember{display:flex;gap:14px;align-items:center;margin-top:16px;background:#ffe27a;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:14px 18px}
+.sta-remember>span{font-size:38px;line-height:1}
+.sta-remember small{display:block;font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:11.5px}
+.sta-remember b{font:600 19px/1.35 Fredoka,Nunito,sans-serif}
+.sta-quiz{margin-top:16px;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:14px 18px}
+.sta-quiz h3{margin:0 0 4px}
+.sta-answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.sta-answers .opt.sta-yes{background:#b2f2bb}
+.sta-answers .opt.sta-no-ans{background:#ffc9c9}
+.sta-nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:20px}
+.sta-question{font-size:18px;font-weight:800;margin:0 0 12px}
+.sta-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sta-form input{width:150px;padding:9px 14px;font:inherit;font-weight:800;border:2.5px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink)}
+.sta-score{color:var(--muted);font-weight:700;font-size:13.5px;margin-bottom:0}
+.sta-sheet{display:grid;gap:8px}
+.sta-sheet div{display:grid;grid-template-columns:160px 1fr;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
+.sta-sheet span{font-weight:700}
+.sta-formulas div{grid-template-columns:230px 1fr}
+.sta-formulas span{font:700 14px/1.5 ui-monospace,Menlo,Consolas,monospace}
+@media(max-width:620px){.sta-formulas div{grid-template-columns:1fr}.sta-formulas span{font-size:12.5px}}
+@media(max-width:620px){.sta-stage{min-width:540px}.sta-swipe{display:block}.sta-sheet div{grid-template-columns:1fr;gap:2px}.sta-lab{padding:10px}.sta-idea{font-size:17px}}
+
+/* ---- Learn STA: drawings (every class starts with sx-) ---- */
+.sx-t{font:600 14px Nunito,ui-rounded,system-ui,sans-serif;fill:#241c3a}
+.sx-t.sx-b{font-weight:800}
+.sx-t.sx-s{font-size:12.5px}
+.sx-t.sx-mono{font:600 12.5px ui-monospace,Menlo,Consolas,monospace}
+.sx-t.sx-mono.sx-b{font-weight:800}
+.sx-t.sx-ok-t{fill:#0b7a3e}.sx-t.sx-bad-t{fill:#c92a2a}
+.sx-wire,.sx-clk,.sx-sig,.sx-meta,.sx-edge,.sx-cur,.sx-axis,.sx-guide,.sx-route,.sx-bad-line,.sx-arc-su,.sx-arc-h{fill:none;stroke-linejoin:round}
+.sx-wire{stroke:#241c3a;stroke-width:3}
+.sx-wire.sx-slow{stroke:#e8590c;stroke-width:6}
+.sx-clk{stroke:#1c7ed6;stroke-width:3}.sx-clk.sx-b2{stroke:#9c36b5}
+.sx-sig{stroke:#241c3a;stroke-width:3.5}.sx-sig.sx-q{stroke:#0b7a3e}.sx-sig.sx-bad{stroke:#e03131}
+.sx-meta{stroke:#e03131;stroke-width:3}
+.sx-edge{stroke:#868e96;stroke-width:1.5;stroke-dasharray:5 4}
+.sx-guide{stroke:#241c3a;stroke-width:1.5;stroke-dasharray:3 3}
+.sx-cur{stroke:#e03131;stroke-width:2.5}
+.sx-axis{stroke:#241c3a;stroke-width:1.5}
+.sx-route{stroke:#5b4bdb;stroke-width:11;opacity:.45;stroke-linecap:round}
+.sx-bad-line{stroke:#e03131;stroke-width:3.5}
+.sx-arc-su{stroke:#e8590c;stroke-width:3.5}.sx-arc-h{stroke:#7048e8;stroke-width:3.5;stroke-dasharray:8 5}
+.sx-arc-su-dot{fill:#e8590c}.sx-arc-h-dot{fill:#7048e8}
+.sx-t.sx-hold-t{fill:#7048e8}
+.sx-ff{fill:#fff;stroke:#241c3a;stroke-width:3}
+.sx-logic{fill:#fff1cf;stroke:#241c3a;stroke-width:2.5}
+.sx-ff.sx-lit,.sx-logic.sx-lit{fill:#ffd43b}
+.sx-chip{fill:#f1f3f5;stroke:#241c3a;stroke-width:2.5;stroke-dasharray:9 5}
+.sx-port,.sx-sample{stroke:#241c3a;stroke-width:2.5}.sx-port{fill:#74c0fc}.sx-sample{fill:#ffd43b}
+.sx-dot{fill:#5b4bdb;stroke:#241c3a;stroke-width:2.5}.sx-dot.sx-alt{fill:#20c997}.sx-dot.sx-bad{fill:#fa5252}.sx-dot.sx-ck{fill:#4dabf7}
+.sx-veil{fill:#fffdf7;opacity:.82}
+.sx-grid-a,.sx-grid-b{fill:none;stroke-width:1.6;stroke-dasharray:2 4;stroke-linecap:round;opacity:.6}
+.sx-grid-a{stroke:#1c7ed6}.sx-grid-b{stroke:#9c36b5}
+.sx-win-su{fill:#ffe066;opacity:.45}.sx-win-h{fill:#b197fc;opacity:.38}
+.sx-hl{fill:#ffe066}
+.sx-bar-q,.sx-bar-logic,.sx-bar-alt,.sx-bar-su,.sx-bar-h,.sx-bar-unc,.sx-bar-req,.sx-bar-skew,.sx-bar-ext,.sx-bar-bad,.sx-slack-ok,.sx-slack-bad{stroke:#241c3a;stroke-width:2}
+.sx-bar-q{fill:#a5d8ff}.sx-bar-logic{fill:#ffd8a8}.sx-bar-alt{fill:#b2f2bb}.sx-bar-su{fill:#ffe066}.sx-bar-h{fill:#d0bfff}.sx-bar-unc{fill:#ffc9c9}.sx-bar-req{fill:#c0eb75}.sx-bar-skew{fill:#eebefa}.sx-bar-ext{fill:#dee2e6}.sx-bar-bad{fill:#ffa8a8}
+.sx-slack-ok{fill:#51cf66}.sx-slack-bad{fill:#ff6b6b}
 </style>
 </head>
 <body>
@@ -606,6 +702,7 @@ footer{margin-top:48px}
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" data-view="start" aria-selected="true" title="Start here"><span class="ti">🚀</span><span class="tt"><b>Start here</b><small>Pick a goal, get a path</small></span></button>
     <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>The full chip journey</small></span></button>
+    <button class="tab" role="tab" data-view="sta" aria-selected="false" title="Learn STA"><span class="ti">⏱️</span><span class="tt"><b>Learn STA</b><small>Timing, zero to advanced</small></span></button>
     <button class="tab" role="tab" data-view="board" aria-selected="false" title="3D FPGA board"><span class="ti">🧊</span><span class="tt"><b>3D FPGA board</b><small>Spin it, run code</small></span></button>
     <button class="tab" role="tab" data-view="guides" aria-selected="false" title="Project guides"><span class="ti">🛠️</span><span class="tt"><b>Project guides</b><small>Hands-on, step by step</small></span></button>
     <button class="tab" role="tab" data-view="code" aria-selected="false" title="Code library"><span class="ti">📚</span><span class="tt"><b>Code library</b><small>Verilog &amp; SystemVerilog</small></span></button>
@@ -633,9 +730,11 @@ footer{margin-top:48px}
 <section id="v-board" hidden></section>
 <section id="v-guides" hidden></section>
 <section id="v-code" hidden></section>
+<section id="v-sta" hidden></section>
 
 <section id="v-diagram" hidden>
   <button class="banner" id="fpgaBanner" hidden>🧊 Want to see a real FPGA board? Open the 3D board, tap its parts and run sample code →</button>
+  <ul class="pkey" id="pkey" aria-label="What the box colours mean"></ul>
   <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
   <div class="diagram-box"><svg id="dsvg" role="img" aria-label="Chip design flow diagram"></svg></div>
   <div class="node dpanel" id="dpanel" style="cursor:default"></div>
@@ -659,6 +758,7 @@ footer{margin-top:48px}
 </div>
 
 <script src="code-library.js"></script>
+<script src="sta.js"></script>
 <script>
 const PH = {front:["✏️ Part 1 · Design it","--p-front"], back:["🧱 Part 2 · Build the layout","--p-back"], sign:["✅ Part 3 · Check it","--p-sign"], si:["🏭 Part 4 · Make it real","--p-si"]};
 const O=(n,note)=>({n,t:'open',note}), C=(n,note)=>({n,t:'comm',note});
@@ -943,6 +1043,7 @@ function renderStart(){
    <div class="tiles">
     <button class="tile" data-go="diagram"><span>🗺️</span><b>Map</b><small>The whole chip journey, with tools for each step</small></button>
     <button class="tile" data-go="pick"><span>🤔</span><b>Help me choose</b><small>Answer questions, get the right tool</small></button>
+    <button class="tile" data-go="sta"><span>⏱️</span><b>Learn STA</b><small>Static timing analysis with animations, from zero to advanced</small></button>
     <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
     <button class="tile" data-go="guides"><span>🛠️</span><b>Project guides</b><small>Hands-on projects, step by step</small></button>
     <button class="tile" data-go="code"><span>📚</span><b>Code library</b><small>Async FIFO and more, in Verilog and SystemVerilog</small></button>
@@ -1041,6 +1142,7 @@ const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
 function wrap(s,max){const w=s.split(" "),out=[];let c="";w.forEach(x=>{if((c+" "+x).trim().length>max&&c){out.push(c);c=x}else c=(c+" "+x).trim()});out.push(c);return out}
 function renderDiagram(){
   $("#fpgaBanner").hidden=track!=="FPGA";
+  $("#pkey").innerHTML=[...new Set(TRACKS[track].stages.map(s=>s.ph))].map(ph=>`<li><i style="background:var(${PH[ph][1]})"></i>${PH[ph][0]}</li>`).join("");
   const st=TRACKS[track].stages,back=BACK[track]||{};
   const cw=($("#v-diagram .diagram-box").clientWidth||innerWidth-30)-20;
   const per=cw<460?1:cw<760?2:3,W=220,H=88,gx=64,gy=70,pad=14,extra=per===1?70:0;
@@ -1258,7 +1360,7 @@ function gblock(b){
    case "warn":return `<div class="gcall warn">⚠️ ${b.html}</div>`;
    case "pre":return `<pre class="gascii">${esc(b.text)}</pre>`;
    case "file":return `<div class="gcode"><div class="gcode-h"><span>📄 ${esc(b.name)}</span>${gcopyBtn(b.code)}</div><pre>${hlGuide(b.code,b.lang)}</pre></div>`;
-   case "cmd":return `<div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span>${gcopyBtn(b.code)}</div><pre>${b.code.split("\n").map(l=>`<span class="tl">${esc(l)}</span>`).join("")}</pre></div>`;
+   case "cmd":return `<div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span>${gcopyBtn(b.code)}</div><pre>${b.code.split("\n").map(l=>`<span class="cl">${esc(l)}</span>`).join("")}</pre></div>`;
    case "out":return `<div class="gcode out"><div class="gcode-h"><span>👀 You should see</span></div><pre>${esc(b.text)}</pre></div>`;
    case "os":return `<div class="gos"><div class="gos-tabs" role="tablist">${["mac","linux","win"].map(o=>`<button class="chip" data-os="${o}" aria-pressed="${o===guideOS}">${OSN[o]}</button>`).join("")}</div><div class="gos-body">${(b[guideOS]||[]).map(gblock).join("")}</div></div>`;
   }
@@ -1353,7 +1455,7 @@ function renderCode(){
    ${codeFile==="tb"?'<p class="secsub">The testbench is plain Verilog, so the same file tests both the Verilog and the SystemVerilog design.</p>':""}
    <h2 class="sec">▶ Run it</h2>
    <p class="secsub">Save both files (<b>${design}</b> and <b>tb_${m.id}.v</b>) in one folder. You need <a href="#guides/sim">Icarus Verilog (see the first guide)</a>.</p>
-   <div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span><button class="chip" id="crun">Copy</button></div><pre>${run.split("\n").map(l=>`<span class="tl">${esc(l)}</span>`).join("")}</pre></div>
+   <div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span><button class="chip" id="crun">Copy</button></div><pre>${run.split("\n").map(l=>`<span class="cl">${esc(l)}</span>`).join("")}</pre></div>
    <div class="gcode out"><div class="gcode-h"><span>👀 You should see</span></div><pre>${esc(m.expect||"PASS")}</pre></div>
    <p class="secsub">The testbench also writes <code>wave.vcd</code>, which you can open in GTKWave or <a href="https://app.surfer-project.org" target="_blank" rel="noopener">Surfer</a>. Counts in the message can differ with another simulator.</p>
    <div class="gwrap"><h3>🧪 Try it yourself</h3><p>${m.try}</p><div class="gnext"><button class="chip" data-c="${next.id}">Next: ${next.title} →</button><button class="chip" id="call">All designs</button></div></div>`;
@@ -1375,17 +1477,18 @@ function openCode(id){codeId=id;codeFile="design";renderCode();window.scrollTo(0
 
 /* ---------- Section addresses: every section has its own link, and Back / Forward work ---------- */
 const FULL_TITLE=document.title;
-const HASH_VIEWS={start:"start",steps:"diagram",map:"diagram",board:"board",guides:"guides",code:"code",choose:"pick",words:"words"};
-const VIEW_HASH={start:"start",diagram:"map",board:"board",guides:"guides",code:"code",pick:"choose",words:"words"};
-const VIEW_TITLE={diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",pick:"Help me choose",words:"Words explained"};
+const HASH_VIEWS={start:"start",steps:"diagram",map:"diagram",board:"board",guides:"guides",code:"code",sta:"sta",choose:"pick",words:"words"};
+const VIEW_HASH={start:"start",diagram:"map",board:"board",guides:"guides",code:"code",sta:"sta",pick:"choose",words:"words"};
+const VIEW_TITLE={diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",sta:"Learn STA",pick:"Help me choose",words:"Words explained"};
 const TRACK_SLUG={ASIC:"asic",FPGA:"fpga",Analog:"analog"};
 let curView="start";
 function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderDiagram()}
-function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;return h}
+function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;if(v==="sta"&&window.STA_UI&&STA_UI.id)h+="/"+STA_UI.id;return h}
 function pageTitle(){
   if(curView==="start")return FULL_TITLE;
   if(curView==="guides"&&guideId){const g=GUIDES.find(x=>x.id===guideId);if(g)return g.title+" \u00b7 Chip Flow Atlas"}
   if(curView==="code"&&codeId){const c=CODELIB.find(x=>x.id===codeId);if(c)return c.title+" in Verilog and SystemVerilog \u00b7 Chip Flow Atlas"}
+  if(curView==="sta"&&window.STA_UI&&STA_UI.title)return STA_UI.title+" \u00b7 Learn STA \u00b7 Chip Flow Atlas";
   return VIEW_TITLE[curView]+" \u00b7 Chip Flow Atlas";
 }
 function syncUrl(replace){
@@ -1405,11 +1508,12 @@ function route(){
   }
   if(v==="guides"){guideId=GUIDES.some(g=>g.id===parts[1])?parts[1]:null;renderGuides()}
   if(v==="code"){const id=CODELIB.some(c=>c.id===parts[1])?parts[1]:null;if(id!==codeId)codeFile="design";codeId=id;renderCode()}
+  if(v==="sta"&&window.STA_UI){$("#v-sta").hidden=false;STA_UI.show(parts[1]||null)}
   showView(v,true);
 }
 function showView(v,fromRoute){
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
-  $("#v-start").hidden=v!=="start";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";$("#v-code").hidden=v!=="code";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#v-start").hidden=v!=="start";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";$("#v-code").hidden=v!=="code";$("#v-sta").hidden=v!=="sta";if(v==="sta"&&window.STA_UI)STA_UI.show(STA_UI.id);if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
   $("#tracks").hidden=v!=="diagram";
   $("#side").classList.remove("open");window.scrollTo(0,0);
   curView=v;syncUrl(!!fromRoute);

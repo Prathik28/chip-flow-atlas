@@ -14,6 +14,7 @@ When I was a beginner, I struggled to understand which website does what and whe
 | --- | --- |
 | 🚀 **Start here** | Pick a goal (play with an FPGA, make a real chip, or design analog circuits) and get a step-by-step learning path with free tools and websites. |
 | 🗺️ **Map** | The whole chip design journey as boxes and arrows for **Digital ASIC**, **FPGA** and **Analog** flows. Tap a step to see its tools, what goes in and out, and where you loop back if something fails. |
+| ⏱️ **Learn STA** | Static timing analysis from zero to advanced in 19 lessons, with animations you can play, pause and change with sliders: delay names, a formula book with worked numbers, a quick check in each lesson, and a practice arena. |
 | 🧊 **3D FPGA board** | A board you can spin and zoom. Tap any part to learn what it does, then run sample Verilog programs (blink, button logic, counter, light chaser, traffic light) and watch the LEDs react. Includes a list of real beginner boards. |
 | 🛠️ **Project guides** | Four hands-on beginner projects with code to copy and the output to expect: simulate a counter, see it as real gates, simulate an analog circuit, and blink LEDs on an iCEBreaker FPGA board. |
 | 📚 **Code library** | 18 common digital designs, including an asynchronous FIFO, in [Verilog and SystemVerilog](code/), each with a testbench that checks itself. |
@@ -28,6 +29,7 @@ Every section has its own address, so you can bookmark it or send it to a friend
 
 - `#start`: the home page
 - `#map/asic`, `#map/fpga`, `#map/analog`: the design flow for each kind of chip
+- `#sta`, or one lesson directly, for example `#sta/setup-hold`
 - `#board`: the 3D FPGA board
 - `#guides`, or one guide directly: `#guides/sim`, `#guides/synth`, `#guides/spice`, `#guides/fpga`
 - `#code`, or one design directly, for example `#code/async_fifo`
@@ -38,7 +40,7 @@ For example: `https://chip-flow-atlas.web.app/#map/fpga`
 
 ## Run it locally
 
-It's a static page with no dependencies: `index.html`, plus `code-library.js` for the Code library.
+It's a static page with no dependencies: `index.html`, plus `code-library.js` for the Code library and `sta.js` for the STA lessons.
 
 Just open `index.html` in a browser, or serve the folder:
 
@@ -68,6 +70,16 @@ After changing anything in `code/`:
 node scripts/check-code.mjs            # every design, both languages: simulate and synthesise
 node scripts/build-code-library.mjs    # rebuild code-library.js for the website
 ```
+
+## Learn STA
+
+The lessons live in [`sta.js`](sta.js). The timing formulas are kept in one place (`STA_CALC`) and are tested against hand-worked numbers:
+
+```bash
+node scripts/check-sta.mjs   # timing maths, every animation, quizzes and practice problems
+```
+
+The lessons are a learning aid. Delay and derate numbers are made up to show the ideas, and the timing report is a simplified example, so follow your tool's documentation and your team's sign-off rules for real designs.
 
 ## Notes
 
