@@ -17,6 +17,7 @@ When I was a beginner, I struggled to understand which website does what and whe
 | 🗺️ **Map** | The same journey drawn as boxes and arrows, with dashed arrows showing failure loops. |
 | 🧊 **3D FPGA board** | A board you can spin and zoom. Tap any part to learn what it does, then run sample Verilog programs (blink, button logic, counter, light chaser, traffic light) and watch the LEDs react. Includes a list of real beginner boards. |
 | 🛠️ **Project guides** | Four hands-on beginner projects with code to copy and the output to expect: simulate a counter, see it as real gates, simulate an analog circuit, and blink LEDs on an iCEBreaker FPGA board. |
+| 📚 **Code library** | 18 common digital designs, including an asynchronous FIFO, in [Verilog and SystemVerilog](code/), each with a testbench that checks itself. |
 | 🤔 **Help me choose** | Answer a few questions about your problem and get the right tool. |
 | 📖 **Words explained** | A plain-English glossary (RTL, netlist, GDSII, tape-out and more). |
 
@@ -31,6 +32,7 @@ Every section has its own address, so you can bookmark it or send it to a friend
 - `#map/asic`, `#map/fpga`, `#map/analog`: the same flows as boxes and arrows
 - `#board`: the 3D FPGA board
 - `#guides`, or one guide directly: `#guides/sim`, `#guides/synth`, `#guides/spice`, `#guides/fpga`
+- `#code`, or one design directly, for example `#code/async_fifo`
 - `#choose`: "Help me choose"
 - `#words`: the glossary
 
@@ -38,7 +40,7 @@ For example: `https://chip-flow-atlas.web.app/#map/fpga`
 
 ## Run it locally
 
-It's a single static file with no build step and no dependencies.
+It's a static page with no dependencies: `index.html`, plus `code-library.js` for the Code library.
 
 Just open `index.html` in a browser, or serve the folder:
 
@@ -47,6 +49,27 @@ python3 -m http.server 8000
 ```
 
 Then visit `http://localhost:8000`.
+
+## Code library
+
+Each folder in [`code/`](code/) has a design in Verilog (`.v`) and SystemVerilog (`.sv`), and one testbench (`tb_*.v`) that works with both. For example:
+
+```bash
+cd code/async_fifo
+iverilog -g2012 -o sim tb_async_fifo.v async_fifo.sv
+vvp sim
+```
+
+Covered: multiplexer, ripple-carry adder, 7-segment decoder, ALU, counter, shift register, edge detector, debouncer, clock divider, PWM, 1011 sequence detector, round-robin arbiter, dual-port RAM, synchronous FIFO, asynchronous FIFO, UART transmitter and receiver, and SPI master.
+
+These are learning examples. Passing a simulation does not make a design ready for a real chip: in particular, a simulator cannot show metastability, so clock-crossing designs also need CDC checks and timing constraints.
+
+After changing anything in `code/`:
+
+```bash
+node scripts/check-code.mjs            # every design, both languages: simulate and synthesise
+node scripts/build-code-library.mjs    # rebuild code-library.js for the website
+```
 
 ## Notes
 

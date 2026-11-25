@@ -578,6 +578,19 @@ footer{margin-top:48px}
 .gbtn{display:inline-block;margin-top:10px;padding:7px 16px;background:#b8f2c8;color:var(--ink);border:2.5px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink);font-weight:800;font-size:14.5px;text-decoration:none;transition:transform .12s,box-shadow .12s}
 .gbtn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink);background:#9be8b0}
 .gbtn:active{transform:translate(2px,2px);box-shadow:none}
+
+/* ---- code library ---- */
+.cfilter{width:100%;max-width:460px;margin-top:10px;padding:11px 18px;font:inherit;border:2.5px solid var(--ink);border-radius:999px;box-shadow:var(--pop);background:#fff;color:var(--ink)}
+.cfilter:focus{outline:3px solid #ffe27a}
+.ccard.featured{background:#e5dbff}
+.cbar{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0 4px;justify-content:space-between}
+.cseg{display:flex;gap:8px}
+.cseg .chip{cursor:pointer}
+.cbtns{display:flex;gap:6px}
+.cmain pre{max-height:620px;tab-size:4}
+.cmain pre .ln{white-space:pre;border-left:0}
+#v-code .secsub code{background:#fff1cf;border:1.5px solid var(--ink);border-radius:6px;padding:0 6px;font:13.5px ui-monospace,Menlo,monospace}
+#v-code .gascii{font-size:12.5px;white-space:pre}
 </style>
 </head>
 <body>
@@ -596,6 +609,7 @@ footer{margin-top:48px}
     <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>Boxes and arrows</small></span></button>
     <button class="tab" role="tab" data-view="board" aria-selected="false" title="3D FPGA board"><span class="ti">🧊</span><span class="tt"><b>3D FPGA board</b><small>Spin it, run code</small></span></button>
     <button class="tab" role="tab" data-view="guides" aria-selected="false" title="Project guides"><span class="ti">🛠️</span><span class="tt"><b>Project guides</b><small>Hands-on, step by step</small></span></button>
+    <button class="tab" role="tab" data-view="code" aria-selected="false" title="Code library"><span class="ti">📚</span><span class="tt"><b>Code library</b><small>Verilog &amp; SystemVerilog</small></span></button>
     <button class="tab" role="tab" data-view="pick" aria-selected="false" title="Help me choose"><span class="ti">🤔</span><span class="tt"><b>Help me choose</b><small>Find the right tool</small></span></button>
     <button class="tab" role="tab" data-view="words" aria-selected="false" title="Words explained"><span class="ti">📖</span><span class="tt"><b>Words explained</b><small>Plain-English glossary</small></span></button>
   </nav>
@@ -619,6 +633,7 @@ footer{margin-top:48px}
 <section id="v-words" hidden></section>
 <section id="v-board" hidden></section>
 <section id="v-guides" hidden></section>
+<section id="v-code" hidden></section>
 
 <section id="v-diagram" hidden>
   <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
@@ -654,6 +669,7 @@ footer{margin-top:48px}
 </main>
 </div>
 
+<script src="code-library.js"></script>
 <script>
 const PH = {front:["✏️ Part 1 · Design it","--p-front"], back:["🧱 Part 2 · Build the layout","--p-back"], sign:["✅ Part 3 · Check it","--p-sign"], si:["🏭 Part 4 · Make it real","--p-si"]};
 const O=(n,note)=>({n,t:'open',note}), C=(n,note)=>({n,t:'comm',note});
@@ -941,6 +957,7 @@ function renderStart(){
     <button class="tile" data-go="pick"><span>🤔</span><b>Help me choose</b><small>Answer questions, get the right tool</small></button>
     <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
     <button class="tile" data-go="guides"><span>🛠️</span><b>Project guides</b><small>Hands-on projects, step by step</small></button>
+    <button class="tile" data-go="code"><span>📚</span><b>Code library</b><small>Async FIFO and more, in Verilog and SystemVerilog</small></button>
     <button class="tile" data-go="words"><span>📖</span><b>Words explained</b><small>RTL, GDSII, tape-out… in plain English</small></button>
    </div>`;
   initJourney();
@@ -1318,18 +1335,93 @@ document.addEventListener("click",e=>{
 });
 
 /* ---------- tabs ---------- */
+/* ---------- Code library: Verilog and SystemVerilog designs (data comes from code-library.js) ---------- */
+const CODELIB=window.CODE_LIBRARY||[];
+const CODE_GROUPS=["Memory & FIFOs","Basics","Timing & signals","State machines","Interfaces"];
+let codeId=null,codeLang="v",codeFile="design",codeFilter="";
+const LEVEL_TAG={Beginner:"open",Intermediate:"web",Advanced:"comm"};
+function hlHDL(code){
+  const e=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+  const KW=/\b(module|endmodule|input|output|inout|reg|wire|logic|assign|always|always_ff|always_comb|initial|posedge|negedge|begin|end|if|else|case|endcase|default|for|forever|repeat|wait|generate|endgenerate|genvar|parameter|localparam|typedef|enum|int|integer|task|endtask|signed)\b/g;
+  return code.replace(/\n$/,"").split("\n").map(ln=>{
+    const i=ln.indexOf("//"),c=i>=0?ln.slice(0,i):ln,cm=i>=0?ln.slice(i):"";
+    const h=e(c).replace(KW,'<span class="kw">$1</span>');
+    return `<span class="ln">${(h+(cm?`<span class="cm">${e(cm)}</span>`:""))||"&nbsp;"}</span>`;
+  }).join("");
+}
+function codeFileInfo(m){
+  if(codeFile==="tb")return{name:`tb_${m.id}.v`,text:m.tb};
+  return codeLang==="sv"?{name:`${m.id}.sv`,text:m.sv}:{name:`${m.id}.v`,text:m.v};
+}
+const codeCard=m=>`<button class="goalcard gcard ccard${m.featured?" featured":""}" data-c="${m.id}"><b>${m.title}</b><small>${m.summary}</small><span class="gmeta"><span class="tag ${LEVEL_TAG[m.level]}">${m.level}</span><span>Verilog + SystemVerilog</span></span></button>`;
+function renderCodeList(){
+  const box=$("#clist");if(!box)return;
+  const q=codeFilter.toLowerCase().trim();
+  const hit=m=>!q||(m.title+" "+m.summary+" "+m.group+" "+m.id.replace(/_/g," ")).toLowerCase().includes(q);
+  const html=CODE_GROUPS.map(g=>{const list=CODELIB.filter(m=>m.group===g&&hit(m));return list.length?`<h2 class="sec">${g}</h2><div class="goalgrid gguides">${list.map(codeCard).join("")}</div>`:""}).join("");
+  box.innerHTML=html||'<p class="secsub">No design matches. Try a shorter word, for example "fifo" or "uart".</p>';
+  box.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>openCode(b.dataset.c));
+}
+function renderCode(){
+  const v=$("#v-code");
+  if(!CODELIB.length){v.innerHTML='<div class="hero"><h2>📚 Code library</h2><p>The code file <b>code-library.js</b> could not be loaded. Make sure it is in the same folder as the page.</p></div>';return}
+  const m=CODELIB.find(x=>x.id===codeId);
+  if(!m){
+    v.innerHTML=`<div class="hero"><h2>📚 Code library</h2><p><b>${CODELIB.length} common digital designs</b> in <b>Verilog</b> and <b>SystemVerilog</b>, each with a testbench that checks itself. Copy them, run them, break them, and learn.</p></div>
+      <input id="cfilter" class="cfilter" type="search" placeholder="Filter designs, e.g. fifo, uart, fsm…" aria-label="Filter designs">
+      <div id="clist"></div>`;
+    const f=$("#cfilter");f.value=codeFilter;f.oninput=()=>{codeFilter=f.value;renderCodeList()};
+    renderCodeList();return;
+  }
+  const file=codeFileInfo(m),design=`${m.id}.${codeLang}`,std=codeLang==="sv"?"-g2012":"-g2005";
+  const run=`iverilog ${std} -o sim tb_${m.id}.v ${design}\nvvp sim`;
+  const idx=CODELIB.indexOf(m),next=CODELIB[(idx+1)%CODELIB.length];
+  v.innerHTML=`<button class="chip gback" id="cback">← All designs</button>
+   <div class="hero"><h2>${m.title}</h2><p>${m.summary}</p>
+    <div class="gmeta"><span class="tag ${LEVEL_TAG[m.level]}">${m.level}</span><span>${m.group}</span></div>
+    <p class="gl-h">How it works</p><ul class="gul">${m.how.map(h=>`<li>${h}</li>`).join("")}</ul>
+    ${m.diagram?`<pre class="gascii">${esc(m.diagram)}</pre>`:""}</div>
+   <div class="cbar">
+    <div class="cseg" role="group" aria-label="Language"><button class="chip" data-lang="v" aria-pressed="${codeLang==="v"}">Verilog</button><button class="chip" data-lang="sv" aria-pressed="${codeLang==="sv"}">SystemVerilog</button></div>
+    <div class="cseg" role="group" aria-label="File"><button class="chip" data-file="design" aria-pressed="${codeFile==="design"}">Design</button><button class="chip" data-file="tb" aria-pressed="${codeFile==="tb"}">Testbench</button></div>
+   </div>
+   <div class="gcode cmain"><div class="gcode-h"><span>📄 ${file.name}</span><span class="cbtns"><button class="chip" id="ccopy">Copy</button><button class="chip" id="cdown">Download</button></span></div><pre>${hlHDL(file.text)}</pre></div>
+   ${codeFile==="tb"?'<p class="secsub">The testbench is plain Verilog, so the same file tests both the Verilog and the SystemVerilog design.</p>':""}
+   <h2 class="sec">▶ Run it</h2>
+   <p class="secsub">Save both files (<b>${design}</b> and <b>tb_${m.id}.v</b>) in one folder. You need <a href="#guides/sim">Icarus Verilog (see the first guide)</a>.</p>
+   <div class="gcode term"><div class="gcode-h"><span>💻 Terminal</span><button class="chip" id="crun">Copy</button></div><pre>${run.split("\n").map(l=>`<span class="tl">${esc(l)}</span>`).join("")}</pre></div>
+   <div class="gcode out"><div class="gcode-h"><span>👀 You should see</span></div><pre>${esc(m.expect||"PASS")}</pre></div>
+   <p class="secsub">The testbench also writes <code>wave.vcd</code>, which you can open in GTKWave or <a href="https://app.surfer-project.org" target="_blank" rel="noopener">Surfer</a>. Counts in the message can differ with another simulator.</p>
+   <div class="gwrap"><h3>🧪 Try it yourself</h3><p>${m.try}</p><div class="gnext"><button class="chip" data-c="${next.id}">Next: ${next.title} →</button><button class="chip" id="call">All designs</button></div></div>`;
+  $("#cback").onclick=$("#call").onclick=()=>openCode(null);
+  v.querySelectorAll(".gnext [data-c]").forEach(b=>b.onclick=()=>openCode(b.dataset.c));
+  const redraw=()=>{const y=scrollY;renderCode();window.scrollTo(0,y)};
+  v.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>{codeLang=b.dataset.lang;redraw()});
+  v.querySelectorAll("[data-file]").forEach(b=>b.onclick=()=>{codeFile=b.dataset.file;redraw()});
+  $("#ccopy").onclick=e=>copyTo(file.text,e.currentTarget);
+  $("#crun").onclick=e=>copyTo(run,e.currentTarget);
+  $("#cdown").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([file.text],{type:"text/plain"}));a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+}
+function copyTo(text,btn){
+  const done=()=>{btn.textContent="Copied ✓";setTimeout(()=>btn.textContent="Copy",1600)},fail=()=>{btn.textContent="Select and copy by hand"};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fail);return}
+  const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done()}catch(_){fail()}ta.remove();
+}
+function openCode(id){codeId=id;codeFile="design";renderCode();window.scrollTo(0,0);syncUrl()}
+
 /* ---------- Section addresses: every section has its own link, and Back / Forward work ---------- */
 const FULL_TITLE=document.title;
-const HASH_VIEWS={start:"start",steps:"flow",map:"diagram",board:"board",guides:"guides",choose:"pick",words:"words"};
-const VIEW_HASH={start:"start",flow:"steps",diagram:"map",board:"board",guides:"guides",pick:"choose",words:"words"};
-const VIEW_TITLE={flow:"Steps",diagram:"Map",board:"3D FPGA board",guides:"Project guides",pick:"Help me choose",words:"Words explained"};
+const HASH_VIEWS={start:"start",steps:"flow",map:"diagram",board:"board",guides:"guides",code:"code",choose:"pick",words:"words"};
+const VIEW_HASH={start:"start",flow:"steps",diagram:"map",board:"board",guides:"guides",code:"code",pick:"choose",words:"words"};
+const VIEW_TITLE={flow:"Steps",diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",pick:"Help me choose",words:"Words explained"};
 const TRACK_SLUG={ASIC:"asic",FPGA:"fpga",Analog:"analog"};
 let curView="start";
 function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderFlow();renderDiagram()}
-function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="flow"||v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;return h}
+function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="flow"||v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;return h}
 function pageTitle(){
   if(curView==="start")return FULL_TITLE;
   if(curView==="guides"&&guideId){const g=GUIDES.find(x=>x.id===guideId);if(g)return g.title+" \u00b7 Chip Flow Atlas"}
+  if(curView==="code"&&codeId){const c=CODELIB.find(x=>x.id===codeId);if(c)return c.title+" in Verilog and SystemVerilog \u00b7 Chip Flow Atlas"}
   return VIEW_TITLE[curView]+" \u00b7 Chip Flow Atlas";
 }
 function syncUrl(replace){
@@ -1348,11 +1440,12 @@ function route(){
     if(k&&k!==track)setTrack(k);
   }
   if(v==="guides"){guideId=GUIDES.some(g=>g.id===parts[1])?parts[1]:null;renderGuides()}
+  if(v==="code"){const id=CODELIB.some(c=>c.id===parts[1])?parts[1]:null;if(id!==codeId)codeFile="design";codeId=id;renderCode()}
   showView(v,true);
 }
 function showView(v,fromRoute){
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
-  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";$("#v-code").hidden=v!=="code";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
   $("#tracks").hidden=!(v==="flow"||v==="diagram");
   $("#side").classList.remove("open");window.scrollTo(0,0);
   curView=v;syncUrl(!!fromRoute);
@@ -1683,7 +1776,7 @@ function renderBoard(){
   window.addEventListener("resize",fitBoard);
 }
 
-renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();renderGuides();$("#fpgaBanner").onclick=()=>showView("board");window.addEventListener("hashchange",route);route();
+renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();renderGuides();renderCode();$("#fpgaBanner").onclick=()=>showView("board");window.addEventListener("hashchange",route);route();
 </script>
 </body>
 </html>

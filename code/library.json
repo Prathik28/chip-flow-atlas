@@ -1,0 +1,252 @@
+[
+ {
+  "id": "async_fifo",
+  "title": "Asynchronous FIFO",
+  "group": "Memory & FIFOs",
+  "level": "Advanced",
+  "featured": true,
+  "summary": "Passes data safely between two unrelated clocks, using Gray-code pointers and 2-flip-flop synchronizers. A favourite interview question.",
+  "how": [
+   "Writes happen on wclk and reads on rclk. The data sits in a shared memory.",
+   "Each side keeps its own pointer, with one extra bit so that full and empty can be told apart.",
+   "Pointers cross to the other clock domain in Gray code, where only one bit changes at a time, through two flip-flops.",
+   "Empty: the read pointer has caught up with the write pointer. Full: the top two Gray bits differ and the rest match.",
+   "A simulator cannot show metastability, so passing the testbench does not prove the clock crossing is safe in hardware. For real chips, run CDC checks and constrain the crossing paths."
+  ],
+  "diagram": "  WRITE side (wclk)                          READ side (rclk)\n  wdata ───────────►[  dual-clock memory  ]───────────► rdata\n  winc ──► write pointer ──► Gray ──► [FF][FF] ──► empty? ◄── read pointer ◄── rinc\n  wfull ◄── full? ◄── [FF][FF] ◄── Gray ◄── read pointer",
+  "try": "Change ASIZE to 4 (16 entries). The testbench uses DEPTH = 8, so update DEPTH and the .ASIZE value in it too.",
+  "expect": "PASS: async_fifo, 3064 items crossed between two clocks in order (full and empty both exercised)"
+ },
+ {
+  "id": "sync_fifo",
+  "title": "Synchronous FIFO",
+  "group": "Memory & FIFOs",
+  "level": "Intermediate",
+  "summary": "A first-in, first-out queue on a single clock, with full, empty and count flags.",
+  "how": [
+   "A memory plus a write pointer and a read pointer.",
+   "The pointers have one extra bit: equal means empty, same address but different top bit means full.",
+   "Writes when full and reads when empty are ignored."
+  ],
+  "try": "Add 'almost_full' and 'almost_empty' flags using count.",
+  "expect": "PASS: sync_fifo, 4000 random cycles (full 1276 times, empty 1293 times)"
+ },
+ {
+  "id": "ram",
+  "title": "Dual-port RAM",
+  "group": "Memory & FIFOs",
+  "level": "Beginner",
+  "summary": "One write port and one read port with a registered read, the style FPGA tools turn into block RAM.",
+  "how": [
+   "Writing happens on the clock edge when we is 1.",
+   "The read data appears one clock after the address.",
+   "Reading and writing the same address in the same cycle returns the old value."
+  ],
+  "try": "Make a single-port version that shares one address for reading and writing.",
+  "expect": "PASS: ram, 2000 random reads and writes"
+ },
+ {
+  "id": "mux4",
+  "title": "4-to-1 multiplexer",
+  "group": "Basics",
+  "level": "Beginner",
+  "summary": "Chooses one of four inputs. The most basic building block.",
+  "how": [
+   "A case statement picks the input named by sel.",
+   "Every case gives y a value, so no unwanted latch is created."
+  ],
+  "try": "Turn it into an 8-to-1 multiplexer.",
+  "expect": "PASS: mux4, 200 random checks"
+ },
+ {
+  "id": "ripple_adder",
+  "title": "Ripple-carry adder",
+  "group": "Basics",
+  "level": "Beginner",
+  "summary": "An adder built from 1-bit full adders with generate, showing how bigger circuits are made from small ones.",
+  "how": [
+   "A full adder adds two bits and a carry.",
+   "generate creates one full adder per bit and chains their carries.",
+   "It is simple but slow for wide numbers, because the carry travels through every bit."
+  ],
+  "try": "Replace the generate block with a single 'assign {cout, sum} = a + b + cin;' and compare the Yosys cell counts.",
+  "expect": "PASS: ripple_adder, 502 checks"
+ },
+ {
+  "id": "seven_seg",
+  "title": "7-segment decoder",
+  "group": "Basics",
+  "level": "Beginner",
+  "summary": "Shows a hex digit (0 to F) on a 7-segment display.",
+  "how": [
+   "A lookup table written as a case statement.",
+   "seg is ordered g,f,e,d,c,b,a and 1 means the segment is on."
+  ],
+  "try": "Add a 'blank' input that turns all segments off.",
+  "expect": "PASS: seven_seg, all 16 digits"
+ },
+ {
+  "id": "alu",
+  "title": "ALU",
+  "group": "Basics",
+  "level": "Intermediate",
+  "summary": "Eight operations (add, subtract, logic, shifts and compare) with carry and zero flags. The calculator inside a CPU.",
+  "how": [
+   "op selects the operation.",
+   "The extra bit on add and subtract becomes the carry or borrow.",
+   "zero is 1 when the result is 0."
+  ],
+  "try": "Add an arithmetic right shift (keeps the sign bit) as a new operation.",
+  "expect": "PASS: alu, 2000 random checks"
+ },
+ {
+  "id": "counter",
+  "title": "Up/down counter",
+  "group": "Basics",
+  "level": "Beginner",
+  "summary": "A counter with reset, load, enable and direction control.",
+  "how": [
+   "Reset has the highest priority, then load, then counting.",
+   "It wraps around naturally at both ends."
+  ],
+  "try": "Make it stop at a MAX value instead of wrapping.",
+  "expect": "PASS: counter, 2000 random clock cycles"
+ },
+ {
+  "id": "shift_register",
+  "title": "Universal shift register",
+  "group": "Basics",
+  "level": "Beginner",
+  "summary": "Holds, shifts left, shifts right or loads in parallel. Used to turn serial data into parallel and back.",
+  "how": [
+   "mode selects hold, shift right, shift left or load.",
+   "ser_msb and ser_lsb are the bits that enter at each end."
+  ],
+  "try": "Add a rotate mode where the bit that falls off comes back in at the other end.",
+  "expect": "PASS: shift_register, 2000 random clock cycles"
+ },
+ {
+  "id": "edge_detector",
+  "title": "Edge detector",
+  "group": "Timing & signals",
+  "level": "Beginner",
+  "summary": "Gives a one-clock pulse when a signal rises or falls.",
+  "how": [
+   "It remembers the signal from the previous clock.",
+   "Comparing old and new values shows which edge happened.",
+   "The input must already be synchronous to the clock."
+  ],
+  "try": "Add a 2-flip-flop synchronizer in front, so it can take a signal from outside the chip.",
+  "expect": "PASS: edge_detector, saw 236 rising edges"
+ },
+ {
+  "id": "debouncer",
+  "title": "Button debouncer",
+  "group": "Timing & signals",
+  "level": "Intermediate",
+  "summary": "Cleans up a bouncing mechanical button so that one press counts once.",
+  "how": [
+   "Two flip-flops synchronize the button.",
+   "The output changes only after the input has stayed different for STABLE_CYCLES clocks.",
+   "Any bounce back restarts the timer."
+  ],
+  "try": "Connect it to the edge detector to get one pulse per button press.",
+  "expect": "PASS: debouncer, 3 bouncy presses gave exactly 3 clean changes"
+ },
+ {
+  "id": "clock_divider",
+  "title": "Clock divider (tick generator)",
+  "group": "Timing & signals",
+  "level": "Beginner",
+  "summary": "Makes slow events from a fast clock, using a clock-enable tick.",
+  "how": [
+   "A counter runs from 0 to DIV-1.",
+   "tick pulses once every DIV clocks. Use it as an enable, not as a new clock."
+  ],
+  "try": "Use tick as the enable of the counter design to count once per second.",
+  "expect": "PASS: clock_divider, 100 ticks exactly 5 clocks apart"
+ },
+ {
+  "id": "pwm",
+  "title": "PWM generator",
+  "group": "Timing & signals",
+  "level": "Beginner",
+  "summary": "Pulse width modulation for dimming LEDs and controlling motors.",
+  "how": [
+   "A free-running counter is compared with duty.",
+   "The output is high for duty out of every 256 clocks (8-bit)."
+  ],
+  "try": "Slowly sweep duty up and down to make an LED 'breathe'.",
+  "expect": "PASS: pwm, high time equals duty for 12 settings"
+ },
+ {
+  "id": "sequence_detector",
+  "title": "Sequence detector FSM (1011)",
+  "group": "State machines",
+  "level": "Intermediate",
+  "summary": "A Moore state machine that finds 1011 in a stream of bits, including overlapping matches.",
+  "how": [
+   "Each state means how much of 1011 has been seen.",
+   "One block stores the state, another works out the next state.",
+   "The SystemVerilog version uses a typedef enum for readable states."
+  ],
+  "try": "Change it to detect 1101. Draw the state diagram first. You will also need to change the pattern in the testbench.",
+  "expect": "PASS: sequence_detector, found 1011 181 times with no mistakes"
+ },
+ {
+  "id": "round_robin_arbiter",
+  "title": "Round-robin arbiter",
+  "group": "State machines",
+  "level": "Advanced",
+  "summary": "Lets several requesters share one resource fairly by taking turns.",
+  "how": [
+   "x & (~x + 1) keeps only the lowest 1 bit.",
+   "A mask gives priority to requesters above the last winner.",
+   "If nobody above is asking, it wraps around to the lowest requester."
+  ],
+  "try": "Set N = 8 and update the testbench to match.",
+  "expect": "PASS: round_robin_arbiter, 2473 fair grants, nobody waited more than 3 turns"
+ },
+ {
+  "id": "uart_tx",
+  "title": "UART transmitter",
+  "group": "Interfaces",
+  "level": "Intermediate",
+  "summary": "Sends bytes over a serial line (8N1), as used to talk to a computer.",
+  "how": [
+   "The line idles high. A frame is a start bit, 8 data bits (lowest first) and a stop bit.",
+   "CLKS_PER_BIT sets the baud rate: clock frequency divided by baud rate.",
+   "A 4-state machine steps through the frame."
+  ],
+  "try": "Add an even parity bit before the stop bit.",
+  "expect": "PASS: uart_tx, 50 bytes decoded correctly from the serial line"
+ },
+ {
+  "id": "uart_rx",
+  "title": "UART receiver",
+  "group": "Interfaces",
+  "level": "Advanced",
+  "summary": "Receives serial bytes, sampling in the middle of each bit and reporting bad frames.",
+  "how": [
+   "Two flip-flops synchronize the incoming line.",
+   "After the start edge it waits half a bit, then samples once per bit time.",
+   "Short glitches are ignored, and a bad stop bit raises frame_error."
+  ],
+  "try": "Connect it to uart_tx (tx to rx) and write a testbench that echoes bytes.",
+  "expect": "PASS: uart_rx, 51 bytes received, glitch ignored, 1 frame error caught"
+ },
+ {
+  "id": "spi_master",
+  "title": "SPI master",
+  "group": "Interfaces",
+  "level": "Advanced",
+  "summary": "Talks to sensors, flash memory and displays over SPI (mode 0).",
+  "how": [
+   "cs_n goes low to select the device.",
+   "Data is read on the rising edge of sclk and changed on the falling edge, most significant bit first.",
+   "Sending and receiving happen at the same time."
+  ],
+  "try": "Make the transfer width a parameter (8, 16 or 32 bits).",
+  "expect": "PASS: spi_master, 200 two-way transfers"
+ }
+]
