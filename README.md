@@ -1,6 +1,6 @@
 # 🧩 Chip Flow Atlas
 
-[![code](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml) [![guides](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml) [![links](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml)
+[![code](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml) [![guides](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml) [![links](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml) [![sta](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/sta.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/sta.yml)
 
 A fun, beginner-friendly guide to **how computer chips are designed**: which tool is used, when, and where to learn it.
 
@@ -90,10 +90,11 @@ The lessons are a learning aid. Delay and derate numbers are made up to show the
 
 ## Automatic checks
 
-Three checks run on GitHub, and the badges at the top show their latest result:
+Four checks run on GitHub, and the badges at the top show their latest result:
 
 - **code**: simulates and synthesises every design in the Code library, in both Verilog and SystemVerilog, and makes sure the website shows the same code as the files in `code/`. It runs on every push.
 - **guides**: runs the code and commands from every project guide (Icarus Verilog, Yosys and ngspice) and checks they still give the results the guides promise. It runs on every push.
+- **sta**: tests the Learn STA section: the timing maths against hand-worked numbers, every animation across its settings, the quizzes and the practice problems. It runs on every push.
 - **links**: checks that every web link in the site and this README still works. It runs every Monday and whenever the page or README changes. Sites that refuse automated checks (for example LinkedIn) only produce a warning, not a failure.
 
 You can run them yourself:
@@ -101,6 +102,7 @@ You can run them yourself:
 ```bash
 node scripts/check-code.mjs     # needs iverilog and yosys installed
 node scripts/check-guides.mjs   # needs iverilog, yosys and ngspice installed
+node scripts/check-sta.mjs
 node scripts/check-links.mjs
 ```
 

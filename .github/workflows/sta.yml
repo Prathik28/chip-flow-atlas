@@ -1,0 +1,21 @@
+name: sta
+
+# Tests the Learn STA section: the timing maths against hand-worked numbers,
+# every animation across its settings, the quizzes and the practice problems.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the STA lessons
+        run: node scripts/check-sta.mjs
