@@ -13,8 +13,7 @@ When I was a beginner, I struggled to understand which website does what and whe
 | Section | What it does |
 | --- | --- |
 | 🚀 **Start here** | Pick a goal (play with an FPGA, make a real chip, or design analog circuits) and get a step-by-step learning path with free tools and websites. |
-| 📋 **Steps** | The whole chip design journey as a flowchart for **Digital ASIC**, **FPGA** and **Analog** flows. Each step explains the tools, what goes in and out, and where you loop back if something fails. |
-| 🗺️ **Map** | The same journey drawn as boxes and arrows, with dashed arrows showing failure loops. |
+| 🗺️ **Map** | The whole chip design journey as boxes and arrows for **Digital ASIC**, **FPGA** and **Analog** flows. Tap a step to see its tools, what goes in and out, and where you loop back if something fails. |
 | 🧊 **3D FPGA board** | A board you can spin and zoom. Tap any part to learn what it does, then run sample Verilog programs (blink, button logic, counter, light chaser, traffic light) and watch the LEDs react. Includes a list of real beginner boards. |
 | 🛠️ **Project guides** | Four hands-on beginner projects with code to copy and the output to expect: simulate a counter, see it as real gates, simulate an analog circuit, and blink LEDs on an iCEBreaker FPGA board. |
 | 📚 **Code library** | 18 common digital designs, including an asynchronous FIFO, in [Verilog and SystemVerilog](code/), each with a testbench that checks itself. |
@@ -28,8 +27,7 @@ There is also a search box that finds any tool by name or description.
 Every section has its own address, so you can bookmark it or send it to a friend, and the browser's Back button works:
 
 - `#start`: the home page
-- `#steps/asic`, `#steps/fpga`, `#steps/analog`: the design flow for each kind of chip
-- `#map/asic`, `#map/fpga`, `#map/analog`: the same flows as boxes and arrows
+- `#map/asic`, `#map/fpga`, `#map/analog`: the design flow for each kind of chip
 - `#board`: the 3D FPGA board
 - `#guides`, or one guide directly: `#guides/sim`, `#guides/synth`, `#guides/spice`, `#guides/fpga`
 - `#code`, or one design directly, for example `#code/async_fifo`

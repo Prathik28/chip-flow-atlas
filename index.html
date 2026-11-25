@@ -605,8 +605,7 @@ footer{margin-top:48px}
   <p class="brand-sub">Learn how chips are made, one small step at a time.</p>
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" data-view="start" aria-selected="true" title="Start here"><span class="ti">🚀</span><span class="tt"><b>Start here</b><small>Pick a goal, get a path</small></span></button>
-    <button class="tab" role="tab" data-view="flow" aria-selected="false" title="Steps"><span class="ti">📋</span><span class="tt"><b>Steps</b><small>The full chip journey</small></span></button>
-    <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>Boxes and arrows</small></span></button>
+    <button class="tab" role="tab" data-view="diagram" aria-selected="false" title="Map"><span class="ti">🗺️</span><span class="tt"><b>Map</b><small>The full chip journey</small></span></button>
     <button class="tab" role="tab" data-view="board" aria-selected="false" title="3D FPGA board"><span class="ti">🧊</span><span class="tt"><b>3D FPGA board</b><small>Spin it, run code</small></span></button>
     <button class="tab" role="tab" data-view="guides" aria-selected="false" title="Project guides"><span class="ti">🛠️</span><span class="tt"><b>Project guides</b><small>Hands-on, step by step</small></span></button>
     <button class="tab" role="tab" data-view="code" aria-selected="false" title="Code library"><span class="ti">📚</span><span class="tt"><b>Code library</b><small>Verilog &amp; SystemVerilog</small></span></button>
@@ -636,20 +635,10 @@ footer{margin-top:48px}
 <section id="v-code" hidden></section>
 
 <section id="v-diagram" hidden>
+  <button class="banner" id="fpgaBanner" hidden>🧊 Want to see a real FPGA board? Open the 3D board, tap its parts and run sample code →</button>
   <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
   <div class="diagram-box"><svg id="dsvg" role="img" aria-label="Chip design flow diagram"></svg></div>
   <div class="node dpanel" id="dpanel" style="cursor:default"></div>
-</section>
-
-<section id="v-flow">
-  <button class="banner" id="fpgaBanner" hidden>🧊 Want to see a real FPGA board? Open the 3D board, tap its parts and run sample code →</button>
-  <div class="legend">
-    <span><i class="dot" style="background:var(--open)"></i>open-source</span>
-    <span><i class="dot" style="background:var(--comm)"></i>commercial</span>
-    <span><i class="dot" style="background:var(--bad)"></i>failure loop-back</span>
-    <button class="chip" id="toggleAll">Expand all</button>
-  </div>
-  <div class="flow" id="flow"></div>
 </section>
 
 <section id="v-pick" hidden>
@@ -952,8 +941,7 @@ function renderStart(){
    <h2 class="sec" id="pathTitle">2 · Your path: ${road.label}</h2>   <div class="road">${stepHTML}</div>
    <h2 class="sec">3 · Where to next?</h2>
    <div class="tiles">
-    <button class="tile" data-go="flow"><span>📋</span><b>Steps</b><small>The whole chip journey, with tools for each step</small></button>
-    <button class="tile" data-go="diagram"><span>🗺️</span><b>Map</b><small>The same journey as boxes and arrows</small></button>
+    <button class="tile" data-go="diagram"><span>🗺️</span><b>Map</b><small>The whole chip journey, with tools for each step</small></button>
     <button class="tile" data-go="pick"><span>🤔</span><b>Help me choose</b><small>Answer questions, get the right tool</small></button>
     <button class="tile" data-go="board"><span>🧊</span><b>3D FPGA board</b><small>Spin a board and tap its parts</small></button>
     <button class="tile" data-go="guides"><span>🛠️</span><b>Project guides</b><small>Hands-on projects, step by step</small></button>
@@ -979,31 +967,6 @@ Object.keys(TRACKS).forEach(k=>{
   tr.appendChild(b);
 });
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
-function renderFlow(){
-  const f=$("#flow");f.innerHTML="";let last=null,i=0;const st=TRACKS[track].stages;
-  st.forEach((s,idx)=>{
-    if(s.ph!==last){f.appendChild(el("div","phase",PH[s.ph][0])).style.color=`var(${PH[s.ph][1]})`;last=s.ph}
-    else{f.appendChild(el("div","arrow"))}
-    i++;
-    const n=el("div","node");n.style.setProperty("--pc",`var(${PH[s.ph][1]})`);n.tabIndex=0;n.setAttribute("role","button");n.setAttribute("aria-expanded","false");
-    n.innerHTML=`<div class="node-head"><div class="num">${i}</div><div><h3>${s.t}</h3><p class="one">${s.one}</p></div><span class="caret">▾</span></div>
-    <div class="pills">${s.tools.slice(0,4).map(t=>`<span class="pill ${t.t}">${t.n.split(" — ")[0]}</span>`).join("")}</div>
-    <div class="detail"><div class="grid">
-      <div class="tl">${plainBlock(s)}<h4>🧰 Tools you can use</h4>${s.tools.map(toolHTML).join("")}</div>
-      <div class="io"><h4>Inputs → outputs</h4><div><b>In:</b> ${s.inp}</div><div><b>Out:</b> ${s.out}</div></div>
-    </div>${s.fail?`<div class="fail">↩ ${s.fail}</div>`:""}</div>`;
-    const tog=()=>n.setAttribute("aria-expanded",n.getAttribute("aria-expanded")==="true"?"false":"true");
-    n.onclick=tog;n.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}};
-    f.appendChild(n);
-  });
-  $("#toggleAll").textContent="Expand all";
-  $("#fpgaBanner").hidden=track!=="FPGA";
-}
-$("#toggleAll").onclick=function(){
-  const nodes=[...document.querySelectorAll(".node")];const open=this.textContent==="Expand all";
-  nodes.forEach(n=>n.setAttribute("aria-expanded",open));this.textContent=open?"Collapse all":"Expand all";
-};
-
 /* ---------- Tool chooser (decision tree) ---------- */
 const L=(tool,when,examples,tip)=>({leaf:true,tool,when,examples,tip});
 const TREE={q:"What are you trying to do?",o:[
@@ -1077,6 +1040,7 @@ let sel=0;
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
 function wrap(s,max){const w=s.split(" "),out=[];let c="";w.forEach(x=>{if((c+" "+x).trim().length>max&&c){out.push(c);c=x}else c=(c+" "+x).trim()});out.push(c);return out}
 function renderDiagram(){
+  $("#fpgaBanner").hidden=track!=="FPGA";
   const st=TRACKS[track].stages,back=BACK[track]||{};
   const cw=($("#v-diagram .diagram-box").clientWidth||innerWidth-30)-20;
   const per=cw<460?1:cw<760?2:3,W=220,H=88,gx=64,gy=70,pad=14,extra=per===1?70:0;
@@ -1411,13 +1375,13 @@ function openCode(id){codeId=id;codeFile="design";renderCode();window.scrollTo(0
 
 /* ---------- Section addresses: every section has its own link, and Back / Forward work ---------- */
 const FULL_TITLE=document.title;
-const HASH_VIEWS={start:"start",steps:"flow",map:"diagram",board:"board",guides:"guides",code:"code",choose:"pick",words:"words"};
-const VIEW_HASH={start:"start",flow:"steps",diagram:"map",board:"board",guides:"guides",code:"code",pick:"choose",words:"words"};
-const VIEW_TITLE={flow:"Steps",diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",pick:"Help me choose",words:"Words explained"};
+const HASH_VIEWS={start:"start",steps:"diagram",map:"diagram",board:"board",guides:"guides",code:"code",choose:"pick",words:"words"};
+const VIEW_HASH={start:"start",diagram:"map",board:"board",guides:"guides",code:"code",pick:"choose",words:"words"};
+const VIEW_TITLE={diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",pick:"Help me choose",words:"Words explained"};
 const TRACK_SLUG={ASIC:"asic",FPGA:"fpga",Analog:"analog"};
 let curView="start";
-function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderFlow();renderDiagram()}
-function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="flow"||v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;return h}
+function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderDiagram()}
+function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;return h}
 function pageTitle(){
   if(curView==="start")return FULL_TITLE;
   if(curView==="guides"&&guideId){const g=GUIDES.find(x=>x.id===guideId);if(g)return g.title+" \u00b7 Chip Flow Atlas"}
@@ -1435,7 +1399,7 @@ function openGuide(id){guideId=id;renderGuides();window.scrollTo(0,0);syncUrl()}
 function route(){
   const parts=location.hash.replace(/^#\/?/,"").split("/");
   const v=HASH_VIEWS[parts[0]]||"start";
-  if((v==="flow"||v==="diagram")&&parts[1]){
+  if(v==="diagram"&&parts[1]){
     const k=Object.keys(TRACK_SLUG).find(x=>TRACK_SLUG[x]===parts[1].toLowerCase());
     if(k&&k!==track)setTrack(k);
   }
@@ -1445,8 +1409,8 @@ function route(){
 }
 function showView(v,fromRoute){
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view===v));
-  $("#v-start").hidden=v!=="start";$("#v-flow").hidden=v!=="flow";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";$("#v-code").hidden=v!=="code";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
-  $("#tracks").hidden=!(v==="flow"||v==="diagram");
+  $("#v-start").hidden=v!=="start";$("#v-diagram").hidden=v!=="diagram";$("#v-pick").hidden=v!=="pick";$("#v-words").hidden=v!=="words";$("#v-guides").hidden=v!=="guides";$("#v-code").hidden=v!=="code";if(v==="diagram")renderDiagram();$("#v-board").hidden=v!=="board";if(v==="board")requestAnimationFrame(fitBoard);
+  $("#tracks").hidden=v!=="diagram";
   $("#side").classList.remove("open");window.scrollTo(0,0);
   curView=v;syncUrl(!!fromRoute);
 }
@@ -1474,7 +1438,7 @@ const hl=(txt,terms)=>{let o=esc(txt);terms.forEach(t=>{if(t)o=o.replace(new Reg
 function jump(r){
   track=r.k;sel=r.i;
   [...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===track));
-  renderFlow();renderDiagram();showView("diagram");
+  renderDiagram();showView("diagram");
   $("#results").hidden=true;$("#dsvg").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function doSearch(){
@@ -1776,7 +1740,7 @@ function renderBoard(){
   window.addEventListener("resize",fitBoard);
 }
 
-renderFlow();renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();renderGuides();renderCode();$("#fpgaBanner").onclick=()=>showView("board");window.addEventListener("hashchange",route);route();
+renderDiagram();renderWiz([{node:TREE}]);renderStart();renderWords();renderBoard();renderGuides();renderCode();$("#fpgaBanner").onclick=()=>showView("board");window.addEventListener("hashchange",route);route();
 </script>
 </body>
 </html>
