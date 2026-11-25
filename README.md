@@ -1,6 +1,6 @@
 # 🧩 Chip Flow Atlas
 
-[![guides](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml) [![links](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml)
+[![code](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/code.yml) [![guides](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/guides.yml) [![links](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml/badge.svg)](https://github.com/Prathik28/chip-flow-atlas/actions/workflows/links.yml)
 
 A fun, beginner-friendly guide to **how computer chips are designed**: which tool is used, when, and where to learn it.
 
@@ -80,14 +80,16 @@ node scripts/build-code-library.mjs    # rebuild code-library.js for the website
 
 ## Automatic checks
 
-Two checks run on GitHub, and the badges at the top show their latest result:
+Three checks run on GitHub, and the badges at the top show their latest result:
 
+- **code**: simulates and synthesises every design in the Code library, in both Verilog and SystemVerilog, and makes sure the website shows the same code as the files in `code/`. It runs on every push.
 - **guides**: runs the code and commands from every project guide (Icarus Verilog, Yosys and ngspice) and checks they still give the results the guides promise. It runs on every push.
 - **links**: checks that every web link in the site and this README still works. It runs every Monday and whenever the page or README changes. Sites that refuse automated checks (for example LinkedIn) only produce a warning, not a failure.
 
-You can run both yourself:
+You can run them yourself:
 
 ```bash
+node scripts/check-code.mjs     # needs iverilog and yosys installed
 node scripts/check-guides.mjs   # needs iverilog, yosys and ngspice installed
 node scripts/check-links.mjs
 ```

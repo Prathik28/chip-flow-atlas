@@ -1,0 +1,29 @@
+name: code
+
+# Tests every design in the Code library, in both Verilog and SystemVerilog,
+# and makes sure the website's copy (code-library.js) matches the files in code/.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the simulator and synthesis tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog yosys
+
+      - name: Check the website bundle is up to date
+        run: node scripts/build-code-library.mjs --check
+
+      - name: Simulate and synthesise every design
+        run: node scripts/check-code.mjs
