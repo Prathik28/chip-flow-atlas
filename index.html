@@ -393,7 +393,7 @@ footer{font-size:13px}
 .tryit{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:16px}
 .tintro{margin:8px 0 2px;font-weight:700}
 .thint{margin:0 0 8px;color:var(--accent);font-weight:800;font-size:14.5px}
-.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;margin-top:8px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr));gap:14px;margin-top:8px}
 .ch{font:600 16px Fredoka,Nunito,sans-serif;margin:0 0 6px}
 .fine{color:var(--muted);font-size:12.5px;font-weight:600;margin:6px 0 0}
 .codebox pre{margin:0;background:#241c3a;color:#e9e4ff;border-radius:14px;padding:12px 0;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;overflow:auto}
@@ -653,6 +653,10 @@ footer{margin-top:48px}
 .sta-explain .sta-ex-what{grid-column:1/-1;background:#e7f5ff;font-size:17px}
 .sta-explain .sta-ex-analogy{grid-column:1/-1;background:#fff4d6}
 @media(max-width:760px){.sta-explain{grid-template-columns:1fr}}
+/* flow switcher at the top of the Map, only where the side menu is hidden away */
+.phone-tracks{display:none}
+@media(max-width:860px){.phone-tracks{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}.phone-tracks .chip{cursor:pointer}.phone-tracks .chip[aria-pressed="true"]{background:var(--accent);color:#fff}}
+@media(pointer:coarse){input[type=range]{min-height:34px}}   /* sliders need a taller touch area on phones */
 .sta-sheet{display:grid;gap:8px}
 .sta-sheet div{display:grid;grid-template-columns:160px 1fr;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
 .sta-sheet span{font-weight:700}
@@ -744,6 +748,7 @@ footer{margin-top:48px}
 
 <section id="v-diagram" hidden>
   <button class="banner" id="fpgaBanner" hidden>🧊 Want to see a real FPGA board? Open the 3D board, tap its parts and run sample code →</button>
+  <div class="phone-tracks" id="phoneTracks" role="group" aria-label="Type of chip"></div>
   <ul class="pkey" id="pkey" aria-label="What the box colours mean"></ul>
   <p class="hint">👆 Tap any box to learn about it. A <b style="color:var(--bad)">red dashed arrow</b> shows where you go back to if that step fails.</p>
   <div class="diagram-box"><svg id="dsvg" role="img" aria-label="Chip design flow diagram"></svg></div>
@@ -758,7 +763,7 @@ footer{margin-top:48px}
   <div class="contact">
     <div class="who"><span class="wave">👋</span><div><b>Made by PRATHIK AMTE</b><small>Questions, ideas or fixes? Get in touch.</small></div></div>
     <div class="links">
-      <a href="mailto:prathikamte@gmail.com">✉️ prathikamte@gmail.com</a>
+      <a href="mailto:prathikamte@gmail.com">✉️ Email</a>
       <a href="https://www.linkedin.com/in/prathik-amte-313367296/" target="_blank" rel="noopener">💼 LinkedIn</a>
     </div>
   </div>
@@ -1071,12 +1076,13 @@ function renderWords(){
 /* ---------- Flowchart ---------- */
 let track="ASIC";
 const $=s=>document.querySelector(s);
-const tr=$("#trackBtns");
-Object.keys(TRACKS).forEach(k=>{
+// the same flow switcher appears in the side menu and, on phones, at the top of the Map
+const trackBars=[$("#trackBtns"),$("#phoneTracks")];
+trackBars.forEach(bar=>Object.keys(TRACKS).forEach(k=>{
   const b=document.createElement("button");b.className="chip";b.textContent=TRACKS[k].label;b.dataset.k=k;b.setAttribute("aria-pressed",k===track);
   b.onclick=()=>{setTrack(k);syncUrl()};
-  tr.appendChild(b);
-});
+  bar.appendChild(b);
+}));
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
 /* ---------- Tool chooser (decision tree) ---------- */
 const L=(tool,when,examples,tip)=>({leaf:true,tool,when,examples,tip});
@@ -1492,7 +1498,7 @@ const VIEW_HASH={start:"start",diagram:"map",board:"board",guides:"guides",code:
 const VIEW_TITLE={diagram:"Map",board:"3D FPGA board",guides:"Project guides",code:"Code library",sta:"Learn STA",pick:"Help me choose",words:"Words explained"};
 const TRACK_SLUG={ASIC:"asic",FPGA:"fpga",Analog:"analog"};
 let curView="start";
-function setTrack(k){track=k;sel=0;[...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderDiagram()}
+function setTrack(k){track=k;sel=0;trackBars.flatMap(bar=>[...bar.children]).forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===k));renderDiagram()}
 function hashFor(v){let h="#"+VIEW_HASH[v];if(v==="diagram")h+="/"+TRACK_SLUG[track];if(v==="guides"&&guideId)h+="/"+guideId;if(v==="code"&&codeId)h+="/"+codeId;if(v==="sta"&&window.STA_UI&&STA_UI.id)h+="/"+STA_UI.id;return h}
 function pageTitle(){
   if(curView==="start")return FULL_TITLE;
@@ -1551,7 +1557,7 @@ Object.keys(TRACKS).forEach(k=>TRACKS[k].stages.forEach((s,i)=>s.tools.forEach(t
 const hl=(txt,terms)=>{let o=esc(txt);terms.forEach(t=>{if(t)o=o.replace(new RegExp("("+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),"<mark>$1</mark>")});return o};
 function jump(r){
   track=r.k;sel=r.i;
-  [...tr.children].forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===track));
+  trackBars.flatMap(bar=>[...bar.children]).forEach(c=>c.setAttribute("aria-pressed",c.dataset.k===track));
   renderDiagram();showView("diagram");
   $("#results").hidden=true;$("#dsvg").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -1830,14 +1836,16 @@ function renderBoard(){
      <p class="rbchip">${b.chip}</p><p>${b.good}</p><p class="rbtools"><b>Software:</b> ${b.tools}</p>
      <div class="links">${b.links.map(l=>`<a href="${l[1]}" target="_blank" rel="noopener">↗ ${l[0]}</a>`).join("")}</div></div>`).join("")}</div>`;
   const st=$("#stage");
-  st.addEventListener("pointerdown",e=>{if(e.target.closest(".stagebtns"))return;bdrag={x:e.clientX,y:e.clientY,bx,bz,moved:false};st.classList.add("grab")});
+  st.addEventListener("pointerdown",e=>{if(!e.isPrimary||e.target.closest(".stagebtns"))return;bdrag={x:e.clientX,y:e.clientY,bx,bz,moved:false};st.classList.add("grab")});
   window.addEventListener("pointermove",e=>{
-    if(!bdrag)return;const dx=e.clientX-bdrag.x,dy=e.clientY-bdrag.y;
+    if(!bdrag||!e.isPrimary)return;const dx=e.clientX-bdrag.x,dy=e.clientY-bdrag.y;
     if(Math.hypot(dx,dy)>5)bdrag.moved=true;
     if(bdrag.moved){bz=bdrag.bz-dx*0.5;bx=Math.max(0,Math.min(90,bdrag.bx-dy*0.4));applyBoard()}
   });
+  // a phone can cancel a touch (for example for a system swipe): let go of the board
+  window.addEventListener("pointercancel",()=>{bdrag=null;st.classList.remove("grab")});
   window.addEventListener("pointerup",e=>{
-    if(!bdrag)return;const d=bdrag;bdrag=null;st.classList.remove("grab");
+    if(!bdrag||!e.isPrimary)return;const d=bdrag;bdrag=null;st.classList.remove("grab");
     if(!d.moved){const c=e.target.closest&&e.target.closest(".cub");if(c&&c.dataset.part)selectPart(c.dataset.part);if(c&&c.dataset.btn!==undefined)toggleBtn(+c.dataset.btn)}
   });
   st.addEventListener("mouseover",e=>{const c=e.target.closest(".cub");boardLabel(c&&c.dataset.part||null)});
