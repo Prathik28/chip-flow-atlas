@@ -37,11 +37,12 @@ const STA_CALC = {
     const required = T + (common + branchC) * early - tsu + credit;
     return { arrival, required, credit, slack: required - arrival };
   },
-  borrow({ T, tcq, comb, tsu, open }) {
-    // latch opens at T and closes at T + open
+  borrow({ tcq, comb, tsu, opens, closes }) {
+    // data leaves a flip-flop at 0, passes a latch that is transparent from 'opens' to 'closes',
+    // and is captured by a flip-flop at 'closes'
     const arrival = tcq + comb;
-    const borrowed = Math.max(0, arrival - T), ok = arrival <= T + open - tsu + 1e-9;
-    return { arrival, borrowed, ok, nextStageTime: 2 * T - Math.max(arrival, T) };
+    const borrowed = Math.max(0, arrival - opens), ok = arrival <= closes - tsu + 1e-9;
+    return { arrival, borrowed, ok, nextStageTime: closes - Math.max(arrival, opens) };
   },
   // ---- delay models (simplified, for teaching) ----
   cellDelay({ intrinsic, load, slew, kLoad = 0.08, kSlew = 0.2 }) {
@@ -317,7 +318,7 @@ lesson({
   },
   points: ['<b>Start points</b>: input ports and the <b>clock pins</b> of flip-flops.',
     '<b>End points</b>: output ports and the <b>data pins</b> of flip-flops.',
-    'STA checks the worst path to every end point, so nothing is missed.'],
+    'STA checks every <b>constrained</b> end point without needing test patterns. A path with no constraint, or one excluded by an exception, is <b>not</b> checked.'],
   remember: 'Paths start at an input or a clock pin, and end at a D pin or an output.',
   quiz: { q: 'Where does a register-to-register path start?', options: ['At the D pin of the first flip-flop', 'At the clock pin of the first flip-flop', 'At the Q pin of the second flip-flop'], answer: 1, why: 'The clock edge at the first flip-flop is what launches the data.' }
 });
@@ -647,7 +648,7 @@ delayLesson({
     when: ['On every connection between pins.', 'It is tiny on short local wires and large on <b>long wires crossing the chip</b>, or on wires that are detoured because the area is crowded.', 'Before routing it is only an <b>estimate</b>. After routing, it is based on the real wire shapes.'],
     why: ['On advanced chip processes wires are very thin, so their resistance is high. On long paths, wire delay can be as important as gate delay, or more.', 'It is why a design can pass timing <b>before layout and fail after</b>.', 'It depends on <b>placement</b>: two connected cells placed far apart give a slow path.'],
     change: ['<b>Longer wire</b>: more R and more C, so delay grows roughly with <b>length squared</b>.', '<b>Wider or higher metal layers</b>: usually lower resistance.', '<b>Repeaters</b> break a long wire into short pieces.', '<b>Better placement</b> and shorter routes help most.'],
-    sta: ['The wire\'s R and C are extracted from the layout, commonly into a <code>SPEF</code> file.', 'Tools compute delay and slew at each receiver using accurate methods. <b>Elmore delay</b> is a quick first estimate: for one even wire, <code>R × (C/2 + C_load)</code>.', 'In a report it shows as a line marked <b>net</b>, or it is merged into the next cell\'s line.', 'The wire\'s capacitance is also <b>load</b> for the driving gate, so it increases cell delay too.']
+    sta: ['The wire\'s R and C are extracted from the layout, commonly into a <code>SPEF</code> file.', 'Tools compute delay and slew at each receiver using accurate methods. <b>Elmore delay</b> is a quick first estimate: for one even wire, <code>R × (C/2 + C_load)</code>. It usually comes out high: in a circuit simulation of the wires in this demo, it was about a third above the true 50% delay.', 'In a report it shows as a line marked <b>net</b>, or it is merged into the next cell\'s line.', 'The wire\'s capacitance is also <b>load</b> for the driving gate, so it increases cell delay too.']
   },
   points: ['A wire slows a path <b>twice</b>: its own net delay, and extra load on the driving cell.', 'The R and C per millimetre here are made up to show the shape of the effect.', 'Clock wires have delay too: that is part of clock network latency.'],
   remember: 'Long wire, big delay: it grows roughly with length squared. Repeaters tame it.',
@@ -735,7 +736,7 @@ delayLesson({
     when: ['Every clock edge has to travel, so latency is there on <b>every tick</b>.', 'Before the clock tree is built, the tool treats the clock as <b>ideal</b> and you give it <b>estimates</b>.', 'After <b>clock tree synthesis (CTS)</b>, the network latency is calculated from the real buffers and wires.'],
     why: ['The <b>difference</b> between latencies is <b>skew</b>. When the capture clock is later, setup gets more time and hold gets harder.', 'For a path between two flip-flops on the same clock, latency that both share mostly <b>cancels</b>. (With on-chip variation, analysis needs care: see the OCV lesson.)', 'For <b>input and output</b> paths the other end is outside the chip, so the on-chip latency does <b>not</b> automatically cancel.', 'A deeper clock tree has more buffers: more power, and more room for variation.'],
     change: ['Clock tree <b>depth</b>, buffer sizes and wire lengths.', 'How far the flip-flops are from the clock entry point.', 'Clock tree synthesis tries to <b>balance</b> branches, and sometimes adds skew on purpose (<b>useful skew</b>).', 'Process, voltage and temperature.'],
-    sta: ['Network latency estimate: <code>set_clock_latency 1.2 [get_clocks clk]</code>', 'Source latency: <code>set_clock_latency -source 0.8 [get_clocks clk]</code>', 'After CTS: <code>set_propagated_clock [get_clocks clk]</code> makes the tool calculate network latency from the real tree. Your source latency value is still used.', 'Reports show lines like <code>clock source latency</code> and <code>clock network delay (ideal)</code> or <code>(propagated)</code>.']
+    sta: ['Network latency estimate: <code>set_clock_latency 1.2 [get_clocks clk]</code>', 'Source latency: <code>set_clock_latency -source 0.8 [get_clocks clk]</code>', 'After CTS: <code>set_propagated_clock [get_clocks clk]</code> makes the tool calculate network latency from the real tree. Your source latency value is still used. (Some tools, such as Vivado, calculate it without this command.)', 'Reports show lines such as <code>clock network delay (ideal)</code> or <code>(propagated)</code>. Depending on the report format, source latency has its own line or is included in that one.']
   },
   points: ['<b>Latency</b> is the time to arrive. <b>Skew</b> is a difference in arrival. <b>Jitter</b> is edge-to-edge wobble. They are three different things.', 'Do not add an estimated network latency on top of a real propagated clock tree.', 'On an FPGA, the clock routing is pre-built, and the tool already knows its delays.'],
   remember: 'Source: to the clock definition point. Network: from there to the flip-flop. Their differences make skew.',
@@ -928,19 +929,19 @@ lesson({
   },
   points: ['<b>Hold slack = earliest arrival − required.</b> (The order is the opposite of setup.)',
     'Required = skew + hold time (+ hold uncertainty).',
-    'The <b>clock period does not appear</b>. Slowing the clock cannot fix a hold violation.',
-    'A chip with a hold violation fails at <b>every frequency</b>, so hold must be clean before tape-out.'],
-  remember: 'Setup can be fixed by slowing down. Hold cannot: a hold bug is a dead chip.',
+    'In a normal check, where one edge both launches and captures, the <b>clock period does not appear</b>. Slowing the clock cannot fix that hold violation. (Half-cycle paths, and multicycle paths without <code>-hold</code>, are different.)',
+    'Because changing the frequency does not help, a real hold violation can make a chip unusable, so hold must be clean before tape-out.'],
+  remember: 'Setup can be fixed by slowing down. Hold cannot, so a hold bug is very serious.',
   quiz: { q: 'A fabricated chip has a hold violation. Can you make it work by lowering the clock frequency?', options: ['Yes', 'No', 'Only if you lower it a lot'], answer: 1, why: 'Both events happen at the same clock edge, so the period makes no difference.' }
 });
 
 lesson({
   id: 'skew', group: '3 · Core checks', icon: '🌳', title: 'Clock skew and jitter',
   idea: 'The clock reaches different flip-flops at slightly different times, and its edges wobble.',
-  params: [R('lc', 'Clock delay to FF 1 (launch)', 0, 3, 0.1, 1), R('cc', 'Clock delay to FF 2 (capture)', 0, 3, 0.1, 2), R('jit', 'Jitter / uncertainty', 0, 1, 0.1, 0.2)],
+  params: [R('lc', 'Clock delay to FF 1 (launch)', 0, 3, 0.1, 1), R('cc', 'Clock delay to FF 2 (capture)', 0, 3, 0.1, 2), R('jit', 'Clock jitter (setup only)', 0, 1, 0.1, 0.2)],
   dur: () => 6,
   base: { T: 10, tcq: 1, comb: 8, tsu: 0.8, tcqMin: 0.5, combMin: 0.5, th: 0.6 },
-  calc(p) { const b = this.base, skew = Math.round((p.cc - p.lc) * 100) / 100; return { skew, su: STA_CALC.setup({ ...b, skew, unc: p.jit }), ho: STA_CALC.hold({ ...b, skew, unc: p.jit }) }; },
+  calc(p) { const b = this.base, skew = Math.round((p.cc - p.lc) * 100) / 100; return { skew, su: STA_CALC.setup({ ...b, skew, unc: p.jit }), ho: STA_CALC.hold({ ...b, skew }) }; },
   result(p) {
     const c = this.calc(p), ok = c.su.slack >= -1e-9 && c.ho.slack >= -1e-9;
     return verdict(ok, `Skew = capture − launch = ${sn(c.skew)} ns. Setup slack ${sn(c.su.slack)} ns, hold slack ${sn(c.ho.slack)} ns.`);
@@ -963,7 +964,8 @@ lesson({
   },
   points: ['<b>Skew</b> = capture clock arrival − launch clock arrival.',
     '<b>Positive skew</b> helps setup and hurts hold. <b>Negative skew</b> does the opposite.',
-    '<b>Jitter</b> is the edge moving from cycle to cycle. Together with design margin it goes into <b>clock uncertainty</b>, which makes both checks harder.',
+    '<b>Jitter</b> is the edge moving from cycle to cycle. It goes into <b>setup uncertainty</b>, because setup compares two different edges. A normal hold check uses the <b>same edge</b>, so period jitter is usually left out.',
+    '<b>Clock uncertainty</b> also holds safety margin (and estimated skew before the clock tree is built). Setup and hold usually get different values: <code>set_clock_uncertainty -setup</code> and <code>-hold</code>.',
     'Clock tree synthesis (CTS) builds the buffer tree that keeps skew under control.'],
   remember: 'A late capture clock is a gift to setup and a punishment for hold.',
   quiz: { q: 'You delay the clock to the capture flip-flop. What happens?', options: ['Setup and hold both improve', 'Setup improves, hold gets worse', 'Hold improves, setup gets worse'], answer: 1, why: 'Data gets more time to arrive, but old data must also be held longer.' }
@@ -1049,18 +1051,18 @@ lesson({
   id: 'sdc', group: '3 · Core checks', icon: '📝', title: 'Constraints (SDC)',
   idea: 'STA only knows what you tell it. SDC commands describe the clock and the world outside the chip.',
   params: [R('T', 'Clock period', 5, 20, 1, 10), R('idly', 'Outside delay before IN', 0, 9, 0.5, 4), R('odly', 'Outside time needed after OUT', 0, 9, 0.5, 3)],
-  dur: () => 6, base: { tsu: 0.8, tcq: 1 },
-  budgets(p) { return { input: p.T - p.idly - this.base.tsu, output: p.T - p.odly - this.base.tcq }; },
+  dur: () => 6, base: { tsu: 0.8, tcq: 1, unc: 0.2 },
+  budgets(p) { const b = this.base; return { input: p.T - p.idly - b.tsu - b.unc, output: p.T - p.odly - b.tcq - b.unc }; },
   result(p) {
     const b = this.budgets(p), ok = b.input > 0 && b.output > 0;
-    return verdict(ok, `Inside the chip, the input logic may take ${sn(b.input)} ns and the output logic ${sn(b.output)} ns.${ok ? '' : ' There is no time left: the constraints cannot be met.'}`);
+    return verdict(ok, `Inside the chip, the input logic may take ${sn(b.input)} ns and the output logic ${sn(b.output)} ns (after the flip-flop times and ${this.base.unc} ns uncertainty).${ok ? '' : ' There is no time left: the constraints cannot be met.'}`);
   },
   code: p => [`create_clock -name clk -period ${sn(p.T)} [get_ports clk]`, `set_clock_uncertainty 0.2 [get_clocks clk]`, `set_input_delay  -max ${sn(p.idly)} -clock clk [get_ports din]`, `set_input_delay  -min 0.5 -clock clk [get_ports din]`, `set_output_delay -max ${sn(p.odly)} -clock clk [get_ports dout]`, `set_output_delay -min -0.3 -clock clk [get_ports dout]`],
   say: t => t < 3 ? 'INPUT: the outside world uses part of the clock period before the signal even enters.' : 'OUTPUT: the outside world needs part of the period after the signal leaves.',
   draw(t, p) {
     const b = this.budgets(p), X = v => 110 + v * (480 / p.T);
-    let s = sx.t(14, 40, 'Input path', 'sx-b') + sx.bar(X, 0, p.idly, 50, 'sx-bar-ext', 'outside') + sx.bar(X, p.idly, p.idly + Math.max(0, b.input), 50, b.input > 0 ? 'sx-bar-logic' : 'sx-bar-bad', 'inside') + sx.bar(X, p.T - this.base.tsu, p.T, 50, 'sx-bar-su', 'tsu');
-    s += sx.t(14, 118, 'Output path', 'sx-b') + sx.bar(X, 0, this.base.tcq, 128, 'sx-bar-q', 'tcq') + sx.bar(X, this.base.tcq, this.base.tcq + Math.max(0, b.output), 128, b.output > 0 ? 'sx-bar-logic' : 'sx-bar-bad', 'inside') + sx.bar(X, p.T - p.odly, p.T, 128, 'sx-bar-ext', 'outside');
+    let s = sx.t(14, 40, 'Input path', 'sx-b') + sx.bar(X, 0, p.idly, 50, 'sx-bar-ext', 'outside') + sx.bar(X, p.idly, p.idly + Math.max(0, b.input), 50, b.input > 0 ? 'sx-bar-logic' : 'sx-bar-bad', 'inside') + sx.bar(X, p.T - this.base.unc - this.base.tsu, p.T - this.base.unc, 50, 'sx-bar-su', 'tsu') + sx.bar(X, p.T - this.base.unc, p.T, 50, 'sx-bar-unc', 'unc');
+    s += sx.t(14, 118, 'Output path', 'sx-b') + sx.bar(X, 0, this.base.tcq, 128, 'sx-bar-q', 'tcq') + sx.bar(X, this.base.tcq, this.base.tcq + Math.max(0, b.output), 128, b.output > 0 ? 'sx-bar-logic' : 'sx-bar-bad', 'inside') + sx.bar(X, p.T - this.base.unc - p.odly, p.T - this.base.unc, 128, 'sx-bar-ext', 'outside') + sx.bar(X, p.T - this.base.unc, p.T, 128, 'sx-bar-unc', 'unc');
     s += sx.axis(X, 178, p.T, p.T > 12 ? 2 : 1) + sx.line(X(p.T), 22, X(p.T), 178, 'sx-edge') + sx.t(X(p.T), 18, 'next edge', 'sx-s sx-b', 'middle') + sx.cursor(X((t % 3) / 3 * p.T), t < 3 ? 46 : 124, t < 3 ? 80 : 158);
     return sx.svg(204, s);
   },
@@ -1069,7 +1071,7 @@ lesson({
     '<b>set_output_delay -max</b> is the outside logic plus the outside flip-flop\'s setup. <b>-min</b> is the shortest outside delay minus that flip-flop\'s hold time, so it is often negative.',
     'After synthesis and layout, always check that no path is left <b>unconstrained</b>.'],
   remember: 'Unconstrained means unchecked. A clean report with missing constraints proves nothing.',
-  quiz: { q: 'Period is 10 ns, input delay (max) is 6 ns, setup is 0.5 ns. How long may the logic before the first flip-flop take?', options: ['3.5 ns', '4 ns', '10 ns'], answer: 0, why: '10 − 6 − 0.5 = 3.5 ns.' }
+  quiz: { q: 'Period is 10 ns, input delay (max) is 6 ns, setup is 0.5 ns, with no skew or uncertainty. How long may the logic before the first flip-flop take?', options: ['3.5 ns', '4 ns', '10 ns'], answer: 0, why: '10 − 6 − 0.5 = 3.5 ns.' }
 });
 
 /* ================================ LEVEL 4: ADVANCED ================================ */
@@ -1212,25 +1214,26 @@ lesson({
 lesson({
   id: 'latch', group: '4 · Advanced', icon: '🪟', title: 'Latches and time borrowing',
   idea: 'A latch stays open for part of the cycle, so slow logic can borrow time from the next stage.',
-  params: [R('comb', 'Logic before the latch', 3, 16, 0.25, 11)], dur: () => 20,
-  base: { T: 10, tcq: 1, tsu: 0.5, open: 5 },
+  params: [R('comb', 'Logic before the latch', 1, 10, 0.25, 6)], dur: () => 10,
+  base: { tcq: 1, tsu: 0.5, opens: 5, closes: 10 },
   result(p) {
     const r = STA_CALC.borrow({ ...this.base, comb: p.comb });
-    if (!r.ok) return verdict(false, `Data arrives at ${sn(r.arrival)} ns, too late even for the open latch (it closes at 15 ns, with ${this.base.tsu} ns setup).`);
-    return verdict(true, r.borrowed > 0 ? `Borrowed ${sn(r.borrowed)} ns. The next stage now has only ${sn(r.nextStageTime)} ns instead of 10.` : `Data arrives at ${sn(r.arrival)} ns, before the latch opens. Nothing borrowed.`);
+    if (!r.ok) return verdict(false, `Data arrives at ${sn(r.arrival)} ns, too late even for the open latch (it closes at 10 ns and needs ${this.base.tsu} ns setup).`);
+    return verdict(true, r.borrowed > 0 ? `Borrowed ${sn(r.borrowed)} ns. Stage 2 now has only ${sn(r.nextStageTime)} ns instead of 5, including the next flip-flop's setup time.` : `Data arrives at ${sn(r.arrival)} ns, before the latch opens at 5 ns. Nothing borrowed.`);
   },
-  say: t => t < 10 ? 'The latch is closed. Data is on its way.' : t < 15 ? 'The latch is OPEN: data arriving now passes straight through.' : 'The latch has closed and holds its value.',
+  say: t => t < 5 ? 'CLK is high and the latch is closed. Data left a flip-flop at 0 ns and is on its way.' : t < 10 ? 'CLK is low: the latch is OPEN. Data arriving now passes straight through.' : 'At 10 ns the latch closes, and the next flip-flop captures the result.',
   draw(t, p) {
-    const r = STA_CALC.borrow({ ...this.base, comb: p.comb }), X = v => 70 + v * 27;
-    let s = sx.rect(X(10), 30, 135, 160, 'sx-win-su', 0) + sx.t(X(12.5), 22, 'latch open (transparent)', 'sx-s sx-b', 'middle') + sx.t(14, 66, 'CLK', 'sx-b') + sx.clock(X, 74, 10, 0.001, 20) + sx.axis(X, 190, 20, 5);
-    s += sx.t(10, 118, 'Stage 1', 'sx-b') + sx.bar(X, 0, Math.min(10, r.arrival), 100, 'sx-bar-logic', 'logic') + (r.borrowed ? sx.bar(X, 10, Math.min(r.arrival, 21), 100, r.ok ? 'sx-bar-skew' : 'sx-bar-bad', '+' + sn(r.borrowed) + ' ns') + sx.t(X(Math.min(r.arrival, 21)) + 6, 118, 'borrowed', 'sx-s sx-b') : '');
-    const from = Math.max(r.arrival, 10);
-    s += sx.t(10, 158, 'Stage 2', 'sx-b') + (r.ok ? sx.bar(X, from, 20, 140, 'sx-bar-alt', sn(r.nextStageTime) + ' ns left') : '');
-    const guides = sx.guides(X, [0, 10, 20], 32, 190, 'a') + sx.guides(X, [15, Math.min(r.arrival, 20)], 32, 190, 'b');
-    return sx.svg(246, guides + s + sx.cursor(X(t), 30, 190) + sx.key(234, [['a', 'rising clock edge'], ['b', 'latch closes (15 ns) / data arrives']]));
+    const r = STA_CALC.borrow({ ...this.base, comb: p.comb }), X = v => 70 + v * 46;
+    let s = sx.rect(X(5), 30, X(10) - X(5), 160, 'sx-win-su', 0) + sx.t(X(7.5), 22, 'latch open while CLK is low', 'sx-s sx-b', 'middle') + sx.t(14, 66, 'CLK', 'sx-b') + sx.clock(X, 74, 10, 0.001, 11) + sx.axis(X, 190, 11, 1);
+    s += sx.t(10, 118, 'Stage 1', 'sx-b') + sx.bar(X, 0, Math.min(5, r.arrival), 100, 'sx-bar-logic', 'logic') + (r.borrowed ? sx.bar(X, 5, Math.min(r.arrival, 11), 100, r.ok ? 'sx-bar-skew' : 'sx-bar-bad', '+' + sn(r.borrowed)) : '');
+    const from = Math.max(r.arrival, 5);
+    s += sx.t(10, 158, 'Stage 2', 'sx-b') + (r.ok ? sx.bar(X, from, 10, 140, 'sx-bar-alt', sn(r.nextStageTime) + ' ns left') : '');
+    const guides = sx.guides(X, [0, 5, 10], 32, 190, 'a') + sx.guides(X, [Math.min(r.arrival, 11)], 32, 190, 'b');
+    return sx.svg(246, guides + s + sx.cursor(X(t), 30, 190) + sx.key(234, [['a', 'clock edge'], ['b', 'data reaches the latch']]));
   },
   points: ['A <b>flip-flop</b> samples on an edge. A <b>latch</b> follows its input the whole time it is open.',
     'Data arriving while the latch is open passes through: this is <b>time borrowing</b>.',
+    'With one clock, a timing tool measures the borrow from the latch\'s <b>next opening edge</b>. Here the latch is open while the clock is low (5 to 10 ns), so stage 1 normally has half a cycle.',
     'The borrowed time is taken away from the next stage.',
     'Latches are common in high-speed custom designs. In FPGAs and most beginner designs, <b>avoid unwanted latches</b>.'],
   remember: 'Borrowed time must be paid back by the next stage.',
@@ -1247,7 +1250,7 @@ const STA_FORMULAS = [
   { id: 'setup', label: 'Setup', use: ['T', 'tcq', 'comb', 'tsu', 'skew', 'unc'],
     f: p => { const r = STA_CALC.setup(p); return { eq: ['T + skew  >=  tpcq + tpd + tsetup + uncertainty', 'setup slack = (T + skew - tsu - unc) - (tpcq + tpd)'], num: [`(${sn(p.T)} + (${sn(p.skew)}) - ${sn(p.tsu)} - ${sn(p.unc)}) - (${sn(p.tcq)} + ${sn(p.comb)})`, `= ${sn(r.required)} - ${sn(r.arrival)}`], ans: `setup slack = ${sn(r.slack)} ns  (${met(r.slack)})`, ok: r.slack >= -1e-9, where: ['tpcq = clock-to-Q propagation (max)    tpd = logic propagation (max)', 'skew = capture clock delay - launch clock delay'] }; } },
   { id: 'hold', label: 'Hold', use: ['tcqMin', 'combMin', 'th', 'skew', 'unc'],
-    f: p => { const r = STA_CALC.hold(p); return { eq: ['tccq + tcd  >=  thold + skew + uncertainty', 'hold slack = (tccq + tcd) - (th + skew + unc)'], num: [`(${sn(p.tcqMin)} + ${sn(p.combMin)}) - (${sn(p.th)} + (${sn(p.skew)}) + ${sn(p.unc)})`, `= ${sn(r.arrival)} - ${sn(r.required)}`], ans: `hold slack = ${sn(r.slack)} ns  (${met(r.slack)})`, ok: r.slack >= -1e-9, where: ['tccq = clock-to-Q contamination (min)  tcd = logic contamination (min)', 'The clock period T does not appear.'] }; } },
+    f: p => { const r = STA_CALC.hold(p); return { eq: ['tccq + tcd  >=  thold + skew + uncertainty', 'hold slack = (tccq + tcd) - (th + skew + unc)'], num: [`(${sn(p.tcqMin)} + ${sn(p.combMin)}) - (${sn(p.th)} + (${sn(p.skew)}) + ${sn(p.unc)})`, `= ${sn(r.arrival)} - ${sn(r.required)}`], ans: `hold slack = ${sn(r.slack)} ns  (${met(r.slack)})`, ok: r.slack >= -1e-9, where: ['tccq = clock-to-Q contamination (min)  tcd = logic contamination (min)', 'The clock period T does not appear.', 'Hold uncertainty is usually smaller than setup uncertainty (no period jitter).'] }; } },
   { id: 'fmax', label: 'Min period and Fmax', use: ['tcq', 'comb', 'tsu', 'skew', 'unc'],
     f: p => { const t = STA_CALC.minPeriod(p); return { eq: ['Tmin = tpcq + tpd + tsu + uncertainty - skew', 'Fmax = 1 / Tmin'], num: [`Tmin = ${sn(p.tcq)} + ${sn(p.comb)} + ${sn(p.tsu)} + ${sn(p.unc)} - (${sn(p.skew)}) = ${sn(t)} ns`], ans: `Fmax = ${mhz(t)} MHz`, ok: true, where: ['Use the WORST register-to-register path: it sets Tmin for the clock.', 'Hold must also pass; changing T cannot fix it.'] }; } },
   { id: 'skew', label: 'Latency and skew', use: ['src', 'netL', 'netC'],
@@ -1265,8 +1268,8 @@ const STA_FORMULAS = [
   { id: 'wns', label: 'WNS and TNS', use: ['T'],
     arrivals: [6.2, 7.9, 8.6, 9.4],
     f(p) { const sl = this.arrivals.map(a => Math.round((p.T - 0.5 - a) * 100) / 100), r = STA_CALC.wnsTns(sl); return { eq: ['WNS = the most negative slack of all end points', 'TNS = sum of the negative slacks (one worst slack per end point)'], num: [`4 end points, slacks:  ${sl.map(sn).join(',  ')}`, `${r.failing} of 4 end points fail`], ans: `WNS = ${sn(r.wns)} ns,  TNS = ${sn(r.tns)} ns`, ok: r.failing === 0, where: ['WNS shows HOW BAD the worst problem is. TNS shows HOW MUCH is broken.', 'When nothing fails, some tools show the smallest positive slack as WNS.'] }; } },
-  { id: 'latch', label: 'Latch borrowing', use: ['T', 'tcq', 'comb', 'open', 'tsu', 'unc'],
-    f: p => { const arr = p.tcq + p.comb, b = Math.max(0, arr - p.T), max = STA_CALC.maxBorrow(p), ok = b <= max + 1e-9; return { eq: ['time borrowed = max(0, arrival - latch opening time)', 'maximum borrow = time latch is open - tsu - uncertainty', 'next stage gets  T - time borrowed'], num: [`arrival = ${sn(arr)}, opens at ${sn(p.T)}  ->  borrowed = ${sn(b)}`, `maximum = ${sn(p.open)} - ${sn(p.tsu)} - ${sn(p.unc)} = ${sn(max)}`], ans: ok ? `borrow ${sn(b)} ns, next stage has ${sn(p.T - b)} ns` : `too late: needs ${sn(b)} ns but can borrow only ${sn(max)} ns`, ok, where: ['Latch opens one period after launch. Launch is from a flip-flop.'] }; } },
+  { id: 'latch', label: 'Latch borrowing', use: ['T', 'tcq', 'comb', 'tsu', 'unc'],
+    f: p => { const half = p.T / 2, arr = p.tcq + p.comb, b = Math.max(0, arr - half), max = STA_CALC.maxBorrow({ open: half, tsu: p.tsu, unc: p.unc }), ok = b <= max + 1e-9; return { eq: ['time borrowed = max(0, arrival - latch opening time)', 'maximum borrow = time latch is open - tsu - uncertainty', 'time left for the next stage = latch closing time - max(arrival, opening)'], num: [`arrival = ${sn(arr)}, latch opens at ${sn(half)}  ->  borrowed = ${sn(b)}`, `maximum = ${sn(half)} - ${sn(p.tsu)} - ${sn(p.unc)} = ${sn(max)}`], ans: ok ? `borrow ${sn(b)} ns, next stage has ${sn(p.T - Math.max(arr, half))} ns` : `too late: needs ${sn(b)} ns but can borrow only ${sn(max)} ns`, ok, where: ['Flip-flop at 0, latch open from T/2 to T (50% duty), next flip-flop at T.'] }; } },
   { id: 'ocv', label: 'OCV and CRPR', use: ['T', 'common', 'data', 'late', 'early', 'tsu'],
     f: p => { const r = STA_CALC.ocvSetup({ ...p, branchL: 0.6, branchC: 0.6, crpr: true }); return { eq: ['arrival  = (common + launch) x late + data x late', 'required = T + (common + capture) x early - tsu + CRPR', 'CRPR credit = common x (late - early)'], num: [`arrival = (${sn(p.common)} + 0.6) x ${sn(p.late)} + ${sn(p.data)} x ${sn(p.late)} = ${sn(r.arrival)}`, `CRPR = ${sn(p.common)} x (${sn(p.late)} - ${sn(p.early)}) = ${sn(r.credit)},   required = ${sn(r.required)}`], ans: `setup slack = ${sn(r.slack)} ns  (${met(r.slack)})`, ok: r.slack >= -1e-9, where: ['late / early = derate factors.  launch and capture branches are 0.6 ns here.', 'Flat derates are the simplest method. AOCV and POCV are finer.'] }; } },
   { id: 'delay', label: 'Cell and wire delay', use: ['intr', 'load', 'slew', 'len'],
@@ -1276,7 +1279,7 @@ const F_PARAMS = [
   R('T', 'Clock period T', 2, 20, 0.5, 10), R('N', 'Cycles allowed N', 2, 4, 1, 2, ''), R('tcq', 'Clock-to-Q, max (tpcq)', 0.2, 2, 0.1, 1), R('comb', 'Logic, max (tpd)', 1, 14, 0.5, 6), R('tsu', 'Setup time', 0.1, 2, 0.1, 0.8),
   R('tcqMin', 'Clock-to-Q, min (tccq)', 0.1, 1.5, 0.1, 0.4), R('combMin', 'Logic, min (tcd)', 0, 3, 0.1, 0.6), R('th', 'Hold time', 0.1, 1.5, 0.1, 0.5), R('skew', 'Clock skew', -1, 1, 0.1, 0.2), R('unc', 'Uncertainty', 0, 1, 0.05, 0.2),
   R('src', 'Source latency', 0, 2, 0.1, 0.8), R('netL', 'Network latency to launch FF', 0, 2, 0.1, 1), R('netC', 'Network latency to capture FF', 0, 2, 0.1, 1.3), R('idly', 'Input delay (max)', 0, 9, 0.5, 3), R('odly', 'Output delay (max)', 0, 9, 0.5, 2.5),
-  R('rpath', 'Reset arrival, max', 0.5, 12, 0.5, 4), R('rpathMin', 'Reset arrival, min', 0.1, 3, 0.1, 1), R('trec', 'Recovery time', 0.1, 2, 0.1, 0.9), R('trem', 'Removal time', 0.1, 2, 0.1, 0.5), R('open', 'Time the latch is open', 2, 6, 0.5, 5),
+  R('rpath', 'Reset arrival, max', 0.5, 12, 0.5, 4), R('rpathMin', 'Reset arrival, min', 0.1, 3, 0.1, 1), R('trec', 'Recovery time', 0.1, 2, 0.1, 0.9), R('trem', 'Removal time', 0.1, 2, 0.1, 0.5),
   R('common', 'Shared clock delay', 0, 3, 0.1, 2), R('data', 'Data delay', 1, 12, 0.5, 7), R('late', 'Late derate', 1, 1.2, 0.01, 1.08, 'x'), R('early', 'Early derate', 0.8, 1, 0.01, 0.92, 'x'),
   R('intr', 'Intrinsic delay', 0.2, 1, 0.05, 0.4), R('load', 'Output load', 1, 20, 1, 6, 'units'), R('slew', 'Input slew', 0.2, 2, 0.1, 0.8), R('len', 'Wire length', 0.2, 4, 0.2, 2, 'mm')
 ];

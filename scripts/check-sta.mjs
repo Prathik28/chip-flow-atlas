@@ -29,9 +29,12 @@ ok(JSON.stringify(C.mcpEdges('both', 10)) === '{"setupEdge":20,"holdEdge":0}', '
 r = C.ocvSetup({ T: 10, common: 2, branchL: 0.6, branchC: 0.6, data: 7, tsu: 0.8, late: 1.08, early: 0.92, crpr: false });
 near(r.arrival, 10.368, 'OCV arrival'); near(r.required, 11.592, 'OCV required'); near(r.slack, 1.224, 'OCV slack');
 near(C.ocvSetup({ T: 10, common: 2, branchL: 0.6, branchC: 0.6, data: 7, tsu: 0.8, late: 1.08, early: 0.92, crpr: true }).credit, 0.32, 'CRPR credit = shared delay x (late - early)');
-let b = C.borrow({ T: 10, tcq: 1, comb: 11, tsu: 0.5, open: 5 });
-near(b.borrowed, 2, 'borrowed time'); ok(b.ok, 'borrow fits'); near(b.nextStageTime, 8, 'next stage pays');
-ok(!C.borrow({ T: 10, tcq: 1, comb: 14, tsu: 0.5, open: 5 }).ok, 'too late even for the latch');
+// latch numbers below match what OpenSTA reports for a flip-flop at 0 and a latch open from 5 to 10 ns
+const lat = { tcq: 1, tsu: 0.5, opens: 5, closes: 10 };
+let b = C.borrow({ ...lat, comb: 7 });
+near(b.borrowed, 3, 'borrowed time'); ok(b.ok, 'borrow fits'); near(b.nextStageTime, 2, 'next stage pays');
+near(C.borrow({ ...lat, comb: 3 }).borrowed, 0, 'arriving before the latch opens borrows nothing');
+ok(!C.borrow({ ...lat, comb: 9 }).ok, 'too late even for the latch');
 
 const byId = id => L.find(l => l.id === id);
 const defaults = l => Object.fromEntries([...(l.params || []).map(p => [p.k, p.def]), ...(l.options || []).map(o => [o.k, o.def]), ...(l.toggles || []).map(t => [t[0], false])]);
@@ -75,12 +78,19 @@ near(C.maxBorrow({ open: 5, tsu: 0.8, unc: 0.2 }), 4, 'maximum borrow');
 // the Formula book shows these answers at its default slider settings
 const book = L.find(l => l.id === 'formulas');
 const shown = (f, extra = {}) => book.result({ ...Object.fromEntries(book.params.map(p => [p.k, p.def])), holdFixed: true, ...extra, f }).text;
-for (const [f, want, extra] of [['freq', 'f = 100 MHz'], ['setup', 'setup slack = 2.2 ns'], ['hold', 'hold slack = 0.1 ns'], ['fmax', 'Fmax = 128.21 MHz'], ['skew', 'skew = 0.3 ns'], ['input', 'input setup slack = 0.2 ns'], ['output', 'output setup slack = 0.3 ns'], ['half', 'setup slack = -2.8 ns'], ['mcp', 'setup 12.2 ns'], ['reset', 'recovery 5.1 ns'], ['wns', 'WNS = 0 ns'], ['wns', 'WNS = -1.9 ns,  TNS = -3.4 ns', { T: 8 }], ['latch', 'borrow 0 ns'], ['ocv', 'setup slack = 1.54 ns'], ['delay', 'ns']])
+for (const [f, want, extra] of [['freq', 'f = 100 MHz'], ['setup', 'setup slack = 2.2 ns'], ['hold', 'hold slack = 0.1 ns'], ['fmax', 'Fmax = 128.21 MHz'], ['skew', 'skew = 0.3 ns'], ['input', 'input setup slack = 0.2 ns'], ['output', 'output setup slack = 0.3 ns'], ['half', 'setup slack = -2.8 ns'], ['mcp', 'setup 12.2 ns'], ['reset', 'recovery 5.1 ns'], ['wns', 'WNS = 0 ns'], ['wns', 'WNS = -1.9 ns,  TNS = -3.4 ns', { T: 8 }], ['latch', 'borrow 2 ns, next stage has 3 ns'], ['ocv', 'setup slack = 1.54 ns'], ['delay', 'ns']])
   ok(shown(f, extra).includes(want), `formula book "${f}" should show "${want}" but shows "${shown(f, extra)}"`);
 ok(F.length === book.options[0].choices.length && F.every(x => book.params.some(p => p.when.includes(x.id))), 'every formula has sliders');
 let longest = '';
 for (const s of settings(book)) { const r = F.find(x => x.id === s.f).f(s); for (const line of [...r.eq, ...r.num, r.ans]) if (line.length > longest.length) longest = line; for (const line of r.where) if (line.length > 88) longest = line; }
 ok(longest.length <= 80, `a formula line is too long for the drawing (${longest.length}): ${longest}`);
+
+// ---------- points that were once wrong, found by checking against OpenSTA and published sources ----------
+const sdc = L.find(l => l.id === 'sdc'), bud = sdc.budgets({ T: 10, idly: 4, odly: 3 });
+near(bud.input, 5, 'SDC input budget = 10 - 4 - 0.8 setup - 0.2 uncertainty'); near(bud.output, 5.8, 'SDC output budget = 10 - 3 - 1 tcq - 0.2 uncertainty');
+ok(sdc.code({ T: 10, idly: 4, odly: 3 }).includes('set_clock_uncertainty 0.2 [get_clocks clk]'), 'SDC budgets use the same uncertainty as the SDC commands');
+const sk = L.find(l => l.id === 'skew'), skp = jit => sk.calc({ lc: 1, cc: 2, jit });
+near(skp(0.8).ho.slack, skp(0).ho.slack, 'period jitter does not change a same-edge hold check'); near(skp(0).su.slack - skp(0.8).su.slack, 0.8, 'jitter reduces setup slack');
 
 // ---------- the delay lessons: hand-worked numbers and complete explanations ----------
 const xt = n => C.crosstalk({ base: 1, coupling: 0.4, neighbour: n, overlap: true });
