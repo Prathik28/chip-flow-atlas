@@ -108,7 +108,7 @@ node scripts/check-links.mjs
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Copyright © 2026 PRATHIK AMTE. **All rights reserved.** You may read the site and use its examples for your own personal learning. Copying, republishing or reusing any part of it needs written permission. See [LICENSE](LICENSE). Versions released earlier under the MIT License keep that permission.
 
 ## Made by
 

@@ -656,6 +656,9 @@ footer{margin-top:48px}
 /* flow switcher at the top of the Map, only where the side menu is hidden away */
 .phone-tracks{display:none}
 @media(max-width:860px){.phone-tracks{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}.phone-tracks .chip{cursor:pointer}.phone-tracks .chip[aria-pressed="true"]{background:var(--accent);color:#fff}}
+.legal{margin-top:6px;font-size:13px;color:var(--muted)}
+.legal summary{cursor:pointer;font-weight:800;color:var(--accent);padding:6px 0;width:fit-content}
+.legal p{margin:8px 0;line-height:1.55;max-width:760px}
 @media(pointer:coarse){input[type=range]{min-height:34px}}   /* sliders need a taller touch area on phones */
 .sta-sheet{display:grid;gap:8px}
 .sta-sheet div{display:grid;grid-template-columns:160px 1fr;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
@@ -768,6 +771,14 @@ footer{margin-top:48px}
     </div>
   </div>
   <p class="fineprint">Tool names are examples of common choices, not an exhaustive or ranked list. Commercial EDA licenses and foundry PDKs vary by company and process node.</p>
+  <p class="fineprint">© 2026 PRATHIK AMTE. All rights reserved.</p>
+  <details class="legal">
+    <summary>Privacy &amp; disclaimer</summary>
+    <p><b>Privacy:</b> This site has no sign-in, and its own code sets no cookies, saves none of your data and uses no analytics. It is hosted on Google Firebase, with a copy on GitHub Pages, and loads fonts from Google. These services may receive technical details such as your IP address, under their own policies. If you email or message me, I receive what you send.</p>
+    <p><b>Disclaimer:</b> This site is for learning and may contain mistakes. The STA lessons have not been reviewed by an STA expert. Examples, numbers and simulations are simplified. Before using anything in a real design, check your tool's documentation and your team's sign-off rules. The code and information come without any warranty. Check external websites for their current information and terms.</p>
+    <p><b>Use of this site:</b> You may read it, share links to it, and use its examples and guides for your own personal learning. Copying, republishing or reusing any part of it needs written permission. Earlier versions released under the MIT License keep that permission.</p>
+    <p><b>Names and trademarks:</b> Product and company names belong to their owners. This site is not affiliated with or endorsed by them.</p>
+  </details>
 </footer>
 </main>
 </div>
