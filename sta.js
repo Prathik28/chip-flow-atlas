@@ -53,7 +53,16 @@ const STA_CALC = {
     const piece = l => STA_CALC.elmore({ R: rPerMm * l, C: cPerMm * l, CL });
     return repeater ? 2 * piece(len / 2) + repDelay : piece(len);
   },
+  // crosstalk: a share 'coupling' of the victim's capacitance goes to the neighbour. It counts twice if the
+  // neighbour moves the opposite way, not at all if it moves the same way, and once if it is quiet
+  crosstalk({ base, coupling, neighbour, overlap }) {
+    const k = !overlap ? 1 : neighbour === 'opposite' ? 2 : neighbour === 'same' ? 0 : 1;
+    const delay = base * ((1 - coupling) + k * coupling);
+    return { delay, delta: delay - base };
+  },
   // ---- more timing equations ----
+  // set_output_delay values: what the outside world needs after the output port
+  outputDelay({ tsu = 0, th = 0, wireMax = 0, wireMin = 0 }) { return { max: wireMax + tsu, min: wireMin - th }; },
   inputPath({ T, idly, comb, tsu, unc = 0, skew = 0 }) {
     const arrival = idly + comb, required = T + skew - tsu - unc;
     return { arrival, required, slack: required - arrival };
@@ -283,126 +292,6 @@ lesson({
 });
 
 lesson({
-  id: 'delays', group: '1 · Foundations', icon: '🐢', title: 'Slowest and fastest paths',
-  idea: 'Between two flip-flops there are many routes. The slowest one matters for setup, the fastest one for hold.',
-  params: [R('g', 'Delay of each gate', 0.5, 3, 0.1, 2), R('n', 'Delay of the shortcut', 0.2, 3, 0.1, 0.6), R('tcq', 'Clock-to-Q', 0.2, 2, 0.1, 0.8)],
-  dur: p => p.tcq + Math.max(3 * p.g, p.n) + 1.5,
-  result: p => verdict(true, `Longest path (max delay) = ${sn(p.tcq + Math.max(3 * p.g, p.n))} ns, used for SETUP. Shortest path (min delay) = ${sn(p.tcq + Math.min(3 * p.g, p.n))} ns, used for HOLD.`),
-  say(t, p) {
-    const fast = p.tcq + Math.min(3 * p.g, p.n), slow = p.tcq + Math.max(3 * p.g, p.n);
-    return t < p.tcq ? 'Both signals leave the same flip-flop.' : t < fast ? 'The two signals take different routes…' : t < slow ? 'The quick one has arrived: it could disturb the HOLD window.' : 'The slow one has arrived: it decides how fast the clock can be.';
-  },
-  draw(t, p) {
-    const long = 3 * p.g, tmax = this.dur(p), X = v => 70 + v * (520 / tmax);
-    const top = [[112, 92], [160, 92], [180, 60], [470, 60], [500, 92], [528, 92]], bot = [[112, 92], [160, 92], [180, 142], [470, 142], [500, 92], [528, 92]];
-    const slowTop = long >= p.n;
-    const a = sx.along(top, (t - p.tcq) / long), b = sx.along(bot, (t - p.tcq) / p.n);
-    let s = sx.ff(50, 66, 'FF 1') + sx.ff(528, 66, 'FF 2') + sx.poly(top, 'sx-wire' + (slowTop ? ' sx-slow' : '')) + sx.poly(bot, 'sx-wire' + (slowTop ? '' : ' sx-slow'));
-    [200, 295, 390].forEach(x => s += sx.cloud(x, 38, 66, 44, `${sn(p.g)}`));
-    s += sx.cloud(260, 120, 120, 44, `shortcut ${sn(p.n)}`) + sx.dot(a[0], a[1], 'sx-dot') + sx.dot(b[0], b[1], 'sx-dot sx-alt');
-    s += sx.t(14, 214, 'top', 'sx-b') + sx.bar(X, 0, p.tcq, 196, 'sx-bar-q', 'tcq') + sx.bar(X, p.tcq, p.tcq + long, 196, 'sx-bar-logic', `${sn(long)} ns`)
-      + sx.t(14, 250, 'short', 'sx-b') + sx.bar(X, 0, p.tcq, 232, 'sx-bar-q', 'tcq') + sx.bar(X, p.tcq, p.tcq + p.n, 232, 'sx-bar-alt', `${sn(p.n)} ns`)
-      + sx.axis(X, 272, tmax, 1) + sx.cursor(X(t), 188, 268);
-    return sx.svg(298, s);
-  },
-  points: ['<b>Cell delay</b> is the time through a gate. <b>Net delay</b> is the time along the wire.',
-    'The <b>critical path</b> is the one with the worst timing. It limits the clock speed.',
-    'STA keeps two numbers for every pin: the <b>latest</b> (max) and <b>earliest</b> (min) time a signal can arrive.',
-    'Real delays depend on input slew (how sharp the edge is) and output load. Libraries (.lib) store them in tables.'],
-  remember: 'Setup fears the slowest runner. Hold fears the fastest one.',
-  quiz: { q: 'Which delay does a HOLD check use?', options: ['The maximum (longest) path delay', 'The minimum (shortest) path delay', 'The average delay'], answer: 1, why: 'Hold fails when new data arrives too early, so the fastest route is the dangerous one.' }
-});
-
-lesson({
-  id: 'delay-names', group: '1 · Foundations', icon: '🏷️', title: 'Delay names, explained',
-  idea: 'Every nanosecond on a path has a name. Learn them by watching each one happen.',
-  options: [{ k: 'view', label: 'Which delay', def: 'gate', choices: [['gate', 'Propagation vs contamination'], ['slew', 'Transition (slew)'], ['load', 'Intrinsic + load'], ['wire', 'Wire (interconnect)'], ['clock', 'Clock latency']] }],
-  params: [
-    { ...R('tcd', 'Contamination delay (tcd)', 0.2, 1, 0.1, 0.6), when: ['gate'] }, { ...R('tpd', 'Propagation delay (tpd)', 1, 5, 0.1, 2.4), when: ['gate'] },
-    { ...R('slew', 'Input transition time', 0.2, 2, 0.1, 0.8), when: ['slew', 'load'] },
-    { ...R('intr', 'Intrinsic delay', 0.2, 1, 0.05, 0.4), when: ['load'] }, { ...R('load', 'Output load', 1, 20, 1, 6, 'units'), when: ['load'] },
-    { ...R('len', 'Wire length', 0.2, 4, 0.2, 2, 'mm'), when: ['wire'] },
-    { ...R('src', 'Source latency', 0, 2, 0.1, 0.8), when: ['clock'] }, { ...R('net', 'Network latency (insertion delay)', 0, 2, 0.1, 1.2), when: ['clock'] }],
-  toggles: [['rep', 'Add a repeater (buffer) in the middle', ['wire']]],
-  dur: () => 8,
-  result(p) {
-    if (p.view === 'gate') return verdict(true, `The output can START changing after ${sn(p.tcd)} ns (contamination delay, used for hold) and is SETTLED after ${sn(p.tpd)} ns (propagation delay, used for setup).`);
-    if (p.view === 'slew') { const d = STA_CALC.cellDelay({ intrinsic: 0.4, load: 5, slew: p.slew }); return verdict(true, `Transition time ${sn(p.slew)} ns. In this simple model the gate delay becomes ${sn(d.total)} ns: a slower input edge means a slower gate.`); }
-    if (p.view === 'load') { const d = STA_CALC.cellDelay({ intrinsic: p.intr, load: p.load, slew: p.slew }); return verdict(true, `Cell delay = intrinsic ${sn(d.intrinsic)} + load part ${sn(d.fromLoad)} + slew part ${sn(d.fromSlew)} = ${sn(d.total)} ns.`); }
-    if (p.view === 'wire') {
-      const a = STA_CALC.wire({ len: p.len }), b = STA_CALC.wire({ len: p.len, repeater: true });
-      return verdict(!p.rep || b <= a, `Wire delay ${sn(p.rep ? b : a)} ns${p.rep ? ` with a repeater (${sn(a)} ns without). ${b < a ? 'The repeater helps on this length.' : 'On a wire this short the repeater makes it SLOWER.'}` : '. Without repeaters it grows with the SQUARE of the length.'}`);
-    }
-    return verdict(true, `Total clock latency = source ${sn(p.src)} + network ${sn(p.net)} = ${sn(p.src + p.net)} ns. Skew is the DIFFERENCE in latency between two flip-flops.`);
-  },
-  say(t, p) {
-    return {
-      gate: t < 2 ? 'The input changes.' : 'First the output starts to move (contamination), later it is finally stable (propagation). In between, do not trust it.',
-      slew: 'Real edges are slopes. Transition time (slew) is measured between two voltage levels, here 20% and 80%. Delay is measured from 50% to 50%.',
-      load: 'A gate has a built-in delay, plus extra for the capacitance it must drive, plus extra for a lazy input edge.',
-      wire: 'A wire has resistance and capacitance all along it, so the far end charges slowly.',
-      clock: 'The clock edge takes time to travel from where it is made to each flip-flop.'
-    }[p.view];
-  },
-  draw(t, p) {
-    if (p.view === 'gate') {
-      const X = v => 80 + v * 74, a = 1, y1 = a + p.tcd, y2 = a + Math.max(p.tpd, p.tcd);
-      let s = sx.rect(X(y1), 100, X(y2) - X(y1), 66, 'sx-win-su', 0) + sx.t(14, 62, 'Input A', 'sx-b') + sx.sig(X, 70, 0, [a], 7) + sx.t(14, 142, 'Output Y', 'sx-b');
-      s += sx.path(`M${X(0)} 160L${X(y1)} 160` + Array.from({ length: 9 }, (_, i) => `L${X(y1 + (y2 - y1) * i / 8)} ${i % 2 ? 112 : 158}`).join('') + `L${X(y2)} 112L${X(7)} 112`, 'sx-sig sx-q');
-      const mark = (to, y, name, cls) => sx.line(X(a), y, X(to), y, cls) + sx.line(X(a), y - 7, X(a), y + 7, cls) + sx.line(X(to), y - 7, X(to), y + 7, cls) + sx.t(X(to) + 8, y + 5, name, 'sx-s sx-b');
-      s += mark(y1, 190, `tcd = ${sn(p.tcd)} ns (earliest change)`, 'sx-arc-h') + mark(y2, 216, `tpd = ${sn(Math.max(p.tpd, p.tcd))} ns (settled)`, 'sx-arc-su') + sx.t(X((y1 + y2) / 2), 94, 'unknown', 'sx-s sx-b', 'middle');
-      return sx.svg(278, sx.guides(X, [a, y1, y2], 32, 232, 'b') + s + sx.cursor(X(t / 8 * 7), 30, 232) + sx.key(264, [['b', 'a signal starts or finishes changing']]));
-    }
-    if (p.view === 'slew' || p.view === 'load') {
-      if (p.view === 'load') {
-        const d = STA_CALC.cellDelay({ intrinsic: p.intr, load: p.load, slew: p.slew }), X = v => 90 + v * (500 / Math.max(3, d.total * 1.15));
-        let s = sx.cloud(90, 34, 130, 56, 'gate', true) + sx.line(30, 62, 90, 62, 'sx-wire') + sx.line(220, 62, 420, 62, 'sx-wire');
-        for (let i = 0; i < Math.min(8, Math.ceil(p.load / 2.5)); i++) { const x = 250 + i * 24; s += sx.line(x, 62, x, 92, 'sx-wire') + sx.line(x - 9, 92, x + 9, 92, 'sx-wire') + sx.line(x - 9, 101, x + 9, 101, 'sx-wire'); }
-        s += sx.t(336, 124, `load: ${p.load} units of capacitance`, 'sx-s sx-b', 'middle');
-        const k = Math.min(1, t / 6), upto = d.total * k, part = (from, to, cls, name) => upto > from ? sx.bar(X, from, Math.min(to, upto), 160, cls, name, 34) : '';
-        s += part(0, d.intrinsic, 'sx-bar-q', 'intrinsic') + part(d.intrinsic, d.intrinsic + d.fromLoad, 'sx-bar-logic', 'load') + part(d.intrinsic + d.fromLoad, d.total, 'sx-bar-skew', 'slew');
-        return sx.svg(236, s + sx.t(14, 182, 'Delay', 'sx-b') + sx.t(X(upto) + 8, 182, `${sn(upto)} ns`, 'sx-b') + sx.t(90, 220, 'Real libraries use lookup tables: (input slew, output load) → delay and output slew.', 'sx-s'));
-      }
-      const X = v => 80 + v * 76, d = STA_CALC.cellDelay({ intrinsic: 0.4, load: 5, slew: p.slew }), in50 = 1.2 + p.slew / 1.2, out50 = in50 + d.total, outSlew = 0.5 + p.slew * 0.3;
-      const ramp = (mid, tr, lo, hi, cls, rise) => { const full = tr / 0.6, a = mid - full / 2, b = mid + full / 2; return sx.path(`M${X(0)} ${rise ? lo : hi}L${X(Math.max(0, a))} ${rise ? lo : hi}L${X(b)} ${rise ? hi : lo}L${X(7)} ${rise ? hi : lo}`, cls); };
-      const level = (y, lo, hi, f, name) => sx.line(X(0), lo - (lo - hi) * f, X(7), lo - (lo - hi) * f, 'sx-edge') + sx.t(X(7) + 4, lo - (lo - hi) * f + 4, name, 'sx-s');
-      let s = sx.t(10, 66, 'Input', 'sx-b') + level(0, 96, 36, 0.2, '20%') + level(0, 96, 36, 0.5, '50%') + level(0, 96, 36, 0.8, '80%') + ramp(in50, p.slew, 96, 36, 'sx-sig', true);
-      s += sx.t(10, 172, 'Output', 'sx-b') + level(0, 202, 142, 0.5, '50%') + ramp(out50, outSlew, 202, 142, 'sx-sig sx-q', true);
-      const t20 = in50 - p.slew / 2, t80 = in50 + p.slew / 2;
-      s += sx.line(X(t20), 22, X(t80), 22, 'sx-arc-h') + sx.line(X(t20), 22, X(t20), 84, 'sx-guide') + sx.line(X(t80), 22, X(t80), 48, 'sx-guide') + sx.t(X(t80) + 8, 26, `input transition ${sn(p.slew)} ns`, 'sx-s sx-b');
-      s += sx.line(X(in50), 66, X(in50), 232, 'sx-guide') + sx.line(X(out50), 172, X(out50), 232, 'sx-guide') + sx.line(X(in50), 226, X(out50), 226, 'sx-arc-su') + sx.t(X(out50) + 8, 231, `delay (50% to 50%) ${sn(d.total)} ns`, 'sx-s sx-b');
-      return sx.svg(246, s + sx.cursor(X(t / 8 * 7), 22, 214));
-    }
-    if (p.view === 'wire') {
-      const total = STA_CALC.wire({ len: p.len, repeater: p.rep }), n = 8;
-      let s = sx.t(46, 34, 'driver', 'sx-s sx-b', 'middle') + sx.cloud(14, 46, 66, 44, 'out') + sx.line(80, 68, 560, 68, 'sx-wire') + sx.cloud(560, 46, 66, 44, 'in') + sx.t(593, 34, 'receiver', 'sx-s sx-b', 'middle');
-      for (let i = 0; i < n; i++) { if (p.rep && (i === 3 || i === 4)) continue; const x = 118 + i * 56; s += sx.rect(x - 16, 60, 24, 16, 'sx-bar-logic', 3) + sx.line(x + 22, 68, x + 22, 98, 'sx-wire') + sx.line(x + 13, 98, x + 31, 98, 'sx-wire') + sx.line(x + 13, 106, x + 31, 106, 'sx-wire'); }
-      if (p.rep) s += sx.cloud(290, 46, 74, 44, 'buffer', true);
-      s += sx.t(320, 132, `${sn(p.len)} mm of wire: little resistors (R) and capacitors (C) all along`, 'sx-s sx-b', 'middle') + sx.dot(80 + 480 * Math.min(1, t / 6), 68, 'sx-dot', 9);
-      const max = Math.max(STA_CALC.wire({ len: p.len }), STA_CALC.wire({ len: p.len, repeater: true }), 0.1), bar = (y, name, v, on) => sx.t(14, y + 18, name, 'sx-b') + sx.rect(150, y, Math.max(3, 390 * v / max), 26, on ? 'sx-bar-skew' : 'sx-bar-ext', 5) + sx.t(158 + Math.max(3, 390 * v / max), y + 18, `${v.toFixed(3)} ns`, 'sx-s sx-b');
-      s += bar(154, 'no repeater', STA_CALC.wire({ len: p.len }), !p.rep) + bar(190, 'with repeater', STA_CALC.wire({ len: p.len, repeater: true }), p.rep);
-      return sx.svg(236, s + sx.t(14, 232, 'Elmore estimate for an even wire:  delay = R × (C/2 + C_load)', 'sx-mono sx-b'));
-    }
-    const total = p.src + p.net, gone = total * Math.min(1, t / 6);
-    const k1 = p.src ? Math.min(1, gone / p.src) : 1, k2 = gone <= p.src ? 0 : p.net ? (gone - p.src) / p.net : 1;
-    let s = sx.cloud(14, 60, 92, 50, 'PLL / osc', true) + sx.line(106, 85, 300, 85, 'sx-clk') + sx.dot(300, 85, 'sx-port', 11) + sx.t(300, 62, 'clk port', 'sx-s sx-b', 'middle') + sx.line(300, 85, 520, 85, 'sx-clk') + sx.cloud(360, 67, 96, 36, 'buffers') + sx.ff(520, 48, 'flip-flop', t >= 6);
-    s += sx.dot(k2 > 0 ? 311 + 240 * k2 : 106 + 183 * k1, 85, 'sx-dot sx-ck', 9);
-    const brace = (a, b, y, name, cls) => sx.line(a, y, b, y, cls) + sx.line(a, y - 8, a, y + 8, cls) + sx.line(b, y - 8, b, y + 8, cls) + sx.t((a + b) / 2, y + 24, name, 'sx-s sx-b', 'middle');
-    s += brace(106, 296, 152, `source latency ${sn(p.src)} ns`, 'sx-arc-h') + brace(304, 551, 152, `network latency (insertion) ${sn(p.net)} ns`, 'sx-arc-su') + brace(106, 551, 204, `total clock latency ${sn(total)} ns`, 'sx-arc-h');
-    return sx.svg(246, s);
-  },
-  points: [
-    '<b>Propagation delay (tpd)</b>: the <b>longest</b> time until an output has settled. <b>Contamination delay (tcd)</b>: the <b>shortest</b> time until it starts to change. For a flip-flop they are called <b>tpcq</b> and <b>tccq</b>.',
-    '<b>Transition time</b> (slew): how long a signal takes to change, for example from 20% to 80% of the supply. Libraries choose the thresholds.',
-    '<b>Intrinsic delay</b> is a cell\'s own delay with no external load. The <b>load-dependent</b> part grows with the capacitance it drives. The formula here is a teaching model: real <code>.lib</code> files use tables (NLDM) or current-source models (CCS, ECSM).',
-    '<b>Cell delay</b> is through a gate. <b>Net</b>, <b>wire</b> or <b>interconnect delay</b> is along the wire. <b>Elmore delay</b> is a quick first estimate of it; sign-off tools use extracted parasitics and more accurate models.',
-    'A long wire\'s delay grows roughly with <b>length squared</b>. <b>Repeaters</b> break it into short pieces. On short wires a repeater only adds delay.',
-    '<b>Source latency</b>: from where the clock is made to the point where it is defined. <b>Network latency</b>: from there to the flip-flops. <b>Insertion delay</b> usually means this clock-tree delay. SDC: <code>set_clock_latency</code> (add <code>-source</code> for source latency).'],
-  remember: 'Propagation = the LAST moment (setup). Contamination = the FIRST moment (hold).',
-  quiz: { q: 'Which delay do you use in a hold check?', options: ['Propagation delay (tpd)', 'Contamination delay (tcd)', 'Source latency'], answer: 1, why: 'Hold asks how EARLY new data can arrive, so you need the earliest possible change.' }
-});
-
-lesson({
   id: 'paths', group: '1 · Foundations', icon: '🗺️', title: 'The four timing paths',
   idea: 'STA cuts the whole chip into paths. Each path has a start point and an end point.',
   options: [{ k: 'kind', label: 'Path type', def: 'rr', choices: [['rr', 'Register → register'], ['ir', 'Input → register'], ['ro', 'Register → output'], ['io', 'Input → output']] }],
@@ -433,13 +322,563 @@ lesson({
   quiz: { q: 'Where does a register-to-register path start?', options: ['At the D pin of the first flip-flop', 'At the clock pin of the first flip-flop', 'At the Q pin of the second flip-flop'], answer: 1, why: 'The clock edge at the first flip-flop is what launches the data.' }
 });
 
-/* ================================ LEVEL 2: THE CORE CHECKS ================================ */
+/* ============================ LEVEL 2: DELAYS, ONE BY ONE ============================ */
+// Every lesson here is told in numbered steps. Time t runs from 0 to the number of steps:
+// step k plays while t goes from k to k+1, and ph(t, k) is how far that step has got (0 to 1).
+const DELAY_GROUP = '2 · Delays, one by one';
+const ph = (t, k) => Math.max(0, Math.min(1, t - k));
+const delayLesson = l => lesson({
+  group: DELAY_GROUP, ...l,
+  dur(p) { return this.steps(p).length; },
+  say(t, p) { const s = this.steps(p), k = Math.min(s.length - 1, Math.floor(t)); return `Step ${k + 1} of ${s.length}: ${s[k]}`; }
+});
+// a voltage wave: f(time) gives 0 (low) to 1 (high); drawn from time 0 up to 'upto'
+const wave = (X, base, height, f, tmax, cls, upto = tmax) => {
+  const end = Math.max(0, Math.min(tmax, upto)), pts = [];
+  for (let i = 0; i <= 160; i++) { const u = end * i / 160; pts.push(`${Math.round(X(u) * 10) / 10} ${Math.round((base - height * f(u)) * 10) / 10}`); }
+  return sx.path('M' + pts.join('L'), cls);
+};
+const rampUp = (mid, full) => u => Math.max(0, Math.min(1, (u - mid) / full + 0.5));
+// a measuring bracket between two x positions
+const span = (a, b, y, cls) => sx.line(a, y, b, y, cls) + sx.line(a, y - 7, a, y + 7, cls) + sx.line(b, y - 7, b, y + 7, cls);
+
+/* ---------- 1. the map ---------- */
+delayLesson({
+  id: 'delay-names', icon: '🗺️', title: 'Where every delay lives',
+  idea: 'A signal collects several different delays on its journey. First see where each one lives, then study them one at a time.',
+  steps: () => [
+    'The clock is made by a clock source. The time it takes to reach your design\'s clock pin is SOURCE LATENCY.',
+    'Inside the chip, the clock splits and travels to each flip-flop. That is NETWORK LATENCY (insertion delay). Here FF 1 gets the edge sooner than FF 2. That difference is called SKEW.',
+    'The clock edge reaches FF 1. A moment later its output changes. That is CLOCK-TO-Q delay.',
+    'The data goes through a logic gate. That is CELL DELAY, also called gate delay.',
+    'The data travels along a metal wire to the next gate. That is NET delay, also called wire or interconnect delay.',
+    'A neighbouring wire that switches at the same time can push or hold your signal. That extra change is CROSSTALK DELAY.',
+    'At the edges of the chip, time already used or still needed OUTSIDE is described by INPUT DELAY and OUTPUT DELAY.'
+  ],
+  result: () => verdict(true, 'Inside the chip, a path\'s delay is the clock-to-Q delay plus every cell delay and net delay along the way.'),
+  draw(t) {
+    const k = Math.min(6, Math.floor(t)), lit = (n, d) => k === n ? sx.path(d, 'sx-route') : '';
+    let s = sx.rect(96, 14, 468, 262, 'sx-chip', 18) + sx.t(112, 38, 'CHIP', 'sx-b');
+    // highlights sit under the wires they point at
+    s += lit(0, 'M58 236L96 236') + lit(1, 'M96 236L460 236M160 236L160 150M460 236L460 150') + lit(4, 'M312 99L356 99M400 99L430 99') + lit(5, 'M310 64L420 64') + lit(6, 'M20 99L130 99M492 99L624 99');
+    s += sx.line(20, 99, 130, 99, 'sx-wire') + sx.line(192, 99, 226, 99, 'sx-wire') + sx.line(298, 99, 356, 99, 'sx-wire') + sx.line(400, 99, 430, 99, 'sx-wire') + sx.line(492, 99, 624, 99, 'sx-wire');
+    s += sx.ff(130, 76, 'FF 1', k === 2) + sx.cloud(226, 75, 72, 48, 'gate', k === 3) + sx.cloud(356, 81, 44, 36, 'gate') + sx.ff(430, 76, 'FF 2');
+    s += sx.line(310, 64, 420, 64, 'sx-edge') + sx.t(365, 56, 'neighbour wire', 'sx-s', 'middle');
+    s += sx.cloud(8, 218, 52, 36, 'PLL', k === 0) + sx.line(60, 236, 460, 236, 'sx-clk') + sx.line(160, 236, 160, 150, 'sx-clk') + sx.line(460, 236, 460, 150, 'sx-clk') + sx.dot(96, 236, 'sx-port', 8) + sx.t(106, 262, 'clk pin', 'sx-s sx-b') + sx.cloud(250, 220, 110, 32, 'clock buffers', k === 1);
+    s += sx.dot(20, 99, 'sx-port', 7) + sx.t(10, 82, 'IN', 'sx-s sx-b') + sx.dot(624, 99, 'sx-port', 7) + sx.t(630, 82, 'OUT', 'sx-s sx-b', 'end');
+    const names = ['source latency', 'network latency', 'clock-to-Q delay', 'cell delay', 'net (wire) delay', 'crosstalk delay', 'input and output delay'];
+    const spot = [[8, 281], [250, 208], [176, 176], [220, 144], [318, 144], [308, 36], [248, 176]][k];
+    s += sx.t(spot[0], spot[1], names[k], 'sx-b sx-hold-t');
+    const route = [[[60, 236], [96, 236]], [[96, 236], [460, 236], [460, 150]], [[170, 99], [192, 99]], [[226, 99], [298, 99]], [[298, 99], [430, 99]], [[310, 64], [420, 64]], [[20, 99], [130, 99]]][k];
+    if (k !== 1) { const at = sx.along(route, ph(t, k)); s += sx.dot(at[0], at[1], k === 0 ? 'sx-dot sx-ck' : 'sx-dot', 9); }
+    else {
+      // the clock splits: both copies move at the same speed, so the one with the shorter route arrives first
+      const paths = [[[96, 236], [160, 236], [160, 150]], route], lengths = [150, 450], gone = 450 * Math.min(1, ph(t, 1) * 1.25);
+      paths.forEach((way, i) => { const at = sx.along(way, gone / lengths[i]); s += sx.dot(at[0], at[1], 'sx-dot sx-ck', 9); });
+      if (gone >= lengths[0]) s += sx.t(172, 172, 'arrives first', 'sx-s sx-b sx-ok-t');
+      if (gone >= lengths[1]) s += sx.t(448, 172, 'arrives later', 'sx-s sx-b sx-bad-t', 'end');
+    }
+    return sx.svg(290, s);
+  },
+  tableTitle: '📋 The delays at a glance',
+  table: [['Clock-to-Q', 'inside a flip-flop, clock edge to Q'], ['Cell (gate) delay', 'through a gate, input pin to output pin'], ['Propagation / contamination', 'the LATEST and EARLIEST view of a delay'], ['Transition (slew)', 'how long an edge itself takes'], ['Net (wire) delay', 'along the metal, driver to receiver'], ['Crosstalk delay', 'change caused by a switching neighbour wire'], ['Source latency', 'clock source to the clock definition point'], ['Network latency', 'clock definition point to flip-flop clock pins'], ['Input delay', 'time already used before your input port'], ['Output delay', 'time still needed after your output port'], ['Path delay', 'the total from start point to end point']],
+  explain: {
+    what: 'A <b>delay</b> is the time between a cause and its effect: an input changes, and a little later something else changes. STA never runs your circuit. It <b>adds up delays</b> along every path and compares the total with the time available.',
+    analogy: 'Think of a parcel with a deadline. It spends time being packed, then in each sorting office, then on each road. To know if it arrives in time, you add up every part. Missing one part gives the wrong answer.',
+    when: ['Every time a signal switches. Cells, wires and the clock all take time.', 'Before layout, tools <b>estimate</b> the delays. After routing, they calculate them from the real wires.'],
+    why: ['The longest total decides the <b>fastest clock</b> your chip can use (setup).', 'The shortest total decides whether data can <b>rush through too early</b> (hold). A slower clock does not fix that.', 'When timing fails, knowing <b>which</b> delay is large tells you what to fix.'],
+    change: ['Manufacturing process, supply voltage and temperature (together called <b>PVT</b>) change delays.', 'So do the gate you choose, what it drives, how sharp its input is, and where the cells are placed.'],
+    sta: ['A timing report lists these delays <b>one line at a time</b> and keeps a running total.', 'Cell delays come from the library file (<code>.lib</code>). Wire values come from extracted parasitics (often a <code>SPEF</code> file).']
+  },
+  points: ['Open the lessons that follow in order. Each one shows <b>one</b> delay with its own demonstration.', '<b>Setup time</b> and <b>hold time</b> are not delays. They are rules about when data must stay still.', 'The word <b>latency</b> is used for the clock; it is still a delay.'],
+  remember: 'STA is adding up delays: first learn what each one is, then learn which total to compare.',
+  quiz: { q: 'Which of these is NOT a delay?', options: ['Clock-to-Q', 'Setup time', 'Network latency'], answer: 1, why: 'Setup time is a requirement: how long before the clock edge the data must already be still.' }
+});
+
+/* ---------- 2. propagation delay ---------- */
+delayLesson({
+  id: 'delay-propagation', icon: '🐢', title: 'Propagation delay',
+  idea: 'The time a gate takes to respond: from the moment its input changes to the moment its output has changed.',
+  params: [R('fall', 'Delay when the output FALLS (tpHL)', 0.4, 2.4, 0.1, 1), R('rise', 'Delay when the output RISES (tpLH)', 0.4, 2.4, 0.1, 1.6)],
+  steps: () => [
+    'This gate is an inverter: its output is the opposite of its input. Watch the input start to rise.',
+    'The output does not jump. The gate must first DRAIN the charge stored on its output. This is a fall.',
+    'We measure from the moment the input is half way (50%) to the moment the output is half way. That time is tpHL.',
+    'Now the input falls, so the gate must FILL the output with charge again. Measured the same way, that time is tpLH.'
+  ],
+  result: p => verdict(true, `Falling output: ${sn(p.fall)} ns. Rising output: ${sn(p.rise)} ns. For a setup check, STA keeps the slowest case that can happen on the path (here up to ${sn(Math.max(p.fall, p.rise))} ns).`),
+  draw(t, p) {
+    const X = v => 78 + v * 53, tmax = 10, a = 1.5, b = 6;
+    const upto = [2.2, 1.5 + p.fall + 0.6, 1.5 + p.fall + 1, 10];
+    const k = Math.min(3, Math.floor(t)), from = k ? upto[k - 1] : 0, now = from + (upto[k] - from) * Math.min(1, ph(t, k) * 1.25);
+    const input = u => rampUp(a, 0.7)(u) * (1 - rampUp(b, 0.7)(u)), output = u => 1 - rampUp(a + p.fall, 0.8)(u) * (1 - rampUp(b + p.rise, 0.8)(u));
+    let s = sx.cloud(250, 12, 100, 40, 'inverter', true) + sx.line(190, 32, 250, 32, 'sx-wire') + sx.line(350, 32, 410, 32, 'sx-wire') + sx.t(182, 37, 'A', 'sx-b', 'end') + sx.t(418, 37, 'Y', 'sx-b');
+    s += sx.t(10, 106, 'Input A', 'sx-s sx-b') + sx.t(10, 196, 'Output Y', 'sx-s sx-b');
+    [[118, 'A'], [208, 'Y']].forEach(r => { s += sx.line(X(0), r[0] - 25, X(tmax), r[0] - 25, 'sx-edge') + sx.t(X(tmax) + 4, r[0] - 21, '50%', 'sx-s'); });
+    s += wave(X, 118, 50, input, tmax, 'sx-sig', now) + wave(X, 208, 50, output, tmax, 'sx-sig sx-q', now);
+    let guides = sx.guides(X, [a, a + p.fall], 66, 246, 'b');
+    if (k >= 2) s += span(X(a), X(a + p.fall), 232, 'sx-arc-su') + sx.t(X(a + p.fall) + 8, 237, `tpHL ${sn(p.fall)} ns`, 'sx-s sx-b');
+    if (k >= 3) {
+      guides += sx.guides(X, [b, b + p.rise], 66, 246, 'b');
+      if (now >= b + p.rise) s += span(X(b), X(b + p.rise), 232, 'sx-arc-su') + sx.t(X(b + p.rise) + 8, 237, `tpLH ${sn(p.rise)} ns`, 'sx-s sx-b');
+    }
+    return sx.svg(284, guides + s + sx.cursor(X(now), 62, 220) + sx.key(272, [['b', 'a signal crosses half way (50%)']]));
+  },
+  explain: {
+    what: '<b>Propagation delay (tpd)</b> is the time from a change at a gate\'s input to the resulting change at its output. It is usually measured from the input crossing <b>50%</b> to the output crossing 50%. For a rising output it is called <b>tpLH</b> (low to high), for a falling one <b>tpHL</b>.',
+    analogy: 'Filling and emptying a water tank through a tap. Opening the tap does not fill the tank instantly. A wider tap fills it sooner, and a bigger tank takes longer.',
+    when: ['Every time an input change makes a gate\'s output change.', 'Inside a gate, transistors act like switches with some resistance. The output has some capacitance. Charging or discharging that capacitance <b>takes time</b>.', 'If an input changes but the output keeps its value, there is no output change to delay.'],
+    why: ['These delays add up along a path. If the total is too long, the data misses the next clock edge: a <b>setup violation</b>.', 'So it limits the <b>maximum clock frequency</b> of the chip.'],
+    change: ['<b>More load</b> (more gates or longer wire to drive): slower.', '<b>Stronger (bigger) gate</b>: usually faster at driving a heavy load.', '<b>Slow input edge</b>: usually slower.', '<b>Lower voltage</b> or a slow process: slower. Temperature matters too, and which way depends on the technology and voltage.', 'Rise and fall differ because different transistors do the pulling up and pulling down.'],
+    sta: ['The library stores separate tables for rise and fall, usually named <code>cell_rise</code> and <code>cell_fall</code>.', 'STA follows which edge happens at each pin. After an inverter, a rising input becomes a falling output.', 'The largest (late) delays are used on the data path for <b>setup</b>.']
+  },
+  points: ['In digital design textbooks, <b>tpd</b> means the <b>longest</b> time until the output has settled.', 'In an STA report you will not see the letters tpd. You see a delay on each cell line.', 'One gate does not have one fixed delay. It depends on the input pin, the edge, the slew, the load and the conditions.'],
+  remember: 'Propagation delay is input to output, 50% to 50%. Slowest case: think setup.',
+  quiz: { q: 'You connect many more gates to one output. What happens to that gate\'s propagation delay?', options: ['It increases', 'It stays the same', 'It becomes zero'], answer: 0, why: 'More gates mean more capacitance to charge and discharge through the same transistors.' }
+});
+
+/* ---------- 3. contamination delay ---------- */
+delayLesson({
+  id: 'delay-contamination', icon: '⚡', title: 'Contamination (minimum) delay',
+  idea: 'The earliest moment an output can start to change. Short delays can be just as dangerous as long ones.',
+  params: [R('tcd', 'Contamination delay (earliest change)', 0.2, 2, 0.1, 0.6), R('tpd', 'Propagation delay (settled)', 2, 4.5, 0.1, 2.8), R('th', 'Hold time of the next flip-flop', 0.2, 1.8, 0.1, 1)],
+  steps: p => [
+    'At 0 ns the clock ticks. The next flip-flop starts to capture the OLD value, and at the same moment new data enters the logic.',
+    `For the first ${sn(p.tcd)} ns the output still shows the old value. This is the contamination delay.`,
+    `Then the output starts to change and may wiggle. Only after ${sn(p.tpd)} ns is it settled on the new value.`,
+    STA_CALC.hold({ tcqMin: 0, combMin: p.tcd, th: p.th }).slack >= -1e-9 ? 'The old value stayed for the whole hold window, so the next flip-flop captured it safely.' : 'The output changed INSIDE the hold window. The next flip-flop may capture a wrong value.'
+  ],
+  result(p) {
+    const r = STA_CALC.hold({ tcqMin: 0, combMin: p.tcd, th: p.th });
+    return verdict(r.slack >= -1e-9, `Old value lasts ${sn(p.tcd)} ns, hold needs ${sn(p.th)} ns. Hold slack = ${sn(r.slack)} ns (the launch flip-flop's own delay is left out to keep this simple).`);
+  },
+  draw(t, p) {
+    const X = v => 140 + v * 80, tmax = 5, now = [0.02, p.tcd, p.tpd + 0.4, 5][Math.min(3, Math.floor(t))], prev = [0, 0.02, p.tcd, p.tpd + 0.4][Math.min(3, Math.floor(t))];
+    const at = prev + (now - prev) * Math.min(1, ph(t, Math.min(3, Math.floor(t))) * 1.25), bad = p.tcd < p.th - 1e-9;
+    let s = sx.rect(X(0), 34, p.th * 80, 158, 'sx-win-h', 0) + sx.t(X(0), 24, `hold window ${sn(p.th)} ns`, 'sx-s sx-b');
+    s += sx.t(12, 72, 'Logic input', 'sx-s sx-b') + sx.path(`M${X(-0.4)} 80L${X(0)} 80L${X(0)} 48L${X(tmax)} 48`, 'sx-sig');
+    s += sx.t(12, 154, 'Logic output', 'sx-s sx-b') + sx.path(`M${X(-0.4)} 166L${X(Math.min(at, p.tcd))} 166`, 'sx-sig sx-q') + sx.t(X(-0.4) + 2, 186, 'OLD', 'sx-s sx-b');
+    if (at > p.tcd) {
+      const stop = Math.min(at, p.tpd), n = Math.max(2, Math.round((stop - p.tcd) * 7));
+      s += sx.path(`M${X(p.tcd)} 166` + Array.from({ length: n }, (_, i) => `L${X(p.tcd + (stop - p.tcd) * (i + 1) / n)} ${i % 2 ? 166 : 122}`).join(''), bad ? 'sx-meta' : 'sx-sig sx-q') + sx.t(X((p.tcd + p.tpd) / 2), 112, 'unknown', 'sx-s sx-b', 'middle');
+      if (at >= p.tpd) s += sx.path(`M${X(p.tpd)} 134L${X(at)} 134`, 'sx-sig sx-q') + sx.t(X(p.tpd) + 6, 126, 'NEW', 'sx-s sx-b');
+    }
+    s += span(X(0), X(p.tcd), 208, 'sx-arc-h') + sx.t(X(p.tcd) + 8, 213, `contamination ${sn(p.tcd)} ns`, 'sx-s sx-b') + span(X(0), X(p.tpd), 232, 'sx-arc-su') + sx.t(X(p.tpd) + 8, 237, `propagation ${sn(p.tpd)}`, 'sx-s sx-b');
+    const guides = sx.guides(X, [0], 34, 246, 'a') + sx.guides(X, [p.tcd, p.tpd], 34, 246, 'b');
+    return sx.svg(284, guides + s + sx.cursor(X(at), 34, 192) + sx.key(272, [['a', 'clock edge (0 ns)'], ['b', 'output starts / finishes changing']]));
+  },
+  explain: {
+    what: '<b>Contamination delay (tcd)</b> is the <b>shortest</b> time from an input change until the output <b>starts</b> to change. Until then you can still trust the old value. After it, the output is unknown until the propagation delay has passed.',
+    analogy: 'You drop a stone in a pond. The leaf across the pond stays still for a while, then starts to move, and later settles. Contamination delay is how long the leaf is guaranteed to stay still.',
+    when: ['At every input change, <b>before</b> the output reacts at all.', 'It matters most when there is <b>very little logic</b> between two flip-flops, such as a shift register or a direct wire.', 'It becomes risky when the capture clock arrives <b>later</b> than the launch clock (positive skew).'],
+    why: ['The capture flip-flop needs the old value to stay still for its <b>hold time</b> after the clock edge.', 'If new data arrives too soon, you get a <b>hold violation</b>.', 'Changing the clock period usually <b>cannot</b> fix it, because launch and capture happen at the same edge. A chip with a real hold violation can fail at any speed.'],
+    change: ['<b>Fast conditions</b> (fast process, often higher voltage) make it shorter.', '<b>Fewer or stronger gates</b> and shorter wires make it shorter.', 'To fix hold, designers often <b>add delay</b>: delay cells or buffers on the short data path.'],
+    sta: ['STA tools do not usually say "contamination delay". They say <b>min delay</b> or <b>early delay</b>.', 'The smallest delays along the data path are used for the <b>hold</b> check.', 'In a report it appears when you ask for minimum timing (for example <code>report_timing -delay_type min</code> in many tools).']
+  },
+  points: ['Propagation answers "when is it <b>surely finished</b>?". Contamination answers "when <b>could it start</b> to change?".', 'You cannot assume a delay is zero or large just because the typical value is. Hold uses the <b>earliest</b> case.', 'In the real hold equation you also add the launch flip-flop\'s earliest clock-to-Q delay.'],
+  remember: 'Contamination = how long the old value survives. It protects hold.',
+  quiz: { q: 'A hold check fails. Which change can help?', options: ['Use a slower clock', 'Add some delay to the short data path', 'Remove gates from that path'], answer: 1, why: 'Extra delay keeps the old value at the capture flip-flop for longer.' }
+});
+
+/* ---------- 4. transition (slew) ---------- */
+delayLesson({
+  id: 'delay-transition', icon: '📈', title: 'Transition time (slew)',
+  idea: 'A real signal does not jump from 0 to 1. It climbs, and the time it takes to climb changes other delays.',
+  params: [R('slew', 'Input transition time (20% to 80%)', 0.2, 2, 0.1, 0.8)],
+  steps: () => [
+    'The input starts to climb. A real edge is a slope, not a vertical step.',
+    'Transition time is measured between two voltage levels of the SAME signal. Here: from 20% to 80%.',
+    'The gate responds. Its output has a slope too, partly caused by the input slope.',
+    'Cell delay is measured differently: from the input at 50% to the output at 50%. Make the input lazier and watch the delay grow.'
+  ],
+  result(p) {
+    const d = STA_CALC.cellDelay({ intrinsic: 0.4, load: 5, slew: p.slew });
+    return verdict(p.slew <= 1.4, `Input transition ${sn(p.slew)} ns gives a cell delay of ${sn(d.total)} ns in this simple model. ${p.slew <= 1.4 ? 'It is inside this example\'s limit of 1.4 ns.' : 'It breaks this example\'s limit of 1.4 ns: a max transition violation.'}`);
+  },
+  draw(t, p) {
+    const X = v => 80 + v * 74, d = STA_CALC.cellDelay({ intrinsic: 0.4, load: 5, slew: p.slew }), in50 = 1.7, out50 = in50 + d.total, outSlew = 0.4 + p.slew * 0.3;
+    const k = Math.min(3, Math.floor(t)), upto = [in50 + 0.3, in50 + p.slew, out50 + 0.8, 7], from = k ? upto[k - 1] : 0, now = from + (upto[k] - from) * Math.min(1, ph(t, k) * 1.25);
+    const level = (base, f, name) => sx.line(X(0), base - 60 * f, X(7), base - 60 * f, 'sx-edge') + sx.t(X(7) + 4, base - 60 * f + 4, name, 'sx-s');
+    let s = sx.t(10, 76, 'Input', 'sx-b') + level(106, 0.2, '20%') + level(106, 0.5, '50%') + level(106, 0.8, '80%') + wave(X, 106, 60, rampUp(in50, p.slew / 0.6), 7, 'sx-sig', now);
+    s += sx.t(10, 182, 'Output', 'sx-b') + level(212, 0.5, '50%') + wave(X, 212, 60, rampUp(out50, outSlew / 0.6), 7, 'sx-sig sx-q', now);
+    const t20 = in50 - p.slew / 2, t80 = in50 + p.slew / 2;
+    let guides = '';
+    if (k >= 1) { guides += sx.guides(X, [t20, t80], 22, 112, 'b'); s += span(X(t20), X(t80), 30, 'sx-arc-h') + sx.t(X(t80) + 8, 35, `input transition ${sn(p.slew)} ns`, 'sx-s sx-b'); }
+    if (k >= 3) { guides += sx.guides(X, [in50, out50], 76, 246, 'a'); s += span(X(in50), X(out50), 236, 'sx-arc-su') + sx.t(X(out50) + 8, 241, `cell delay ${sn(d.total)} ns`, 'sx-s sx-b'); }
+    return sx.svg(284, guides + s + sx.cursor(X(now), 40, 218) + sx.key(272, [['b', 'slew is measured here'], ['a', 'delay is measured here']]));
+  },
+  explain: {
+    what: '<b>Transition time</b>, or <b>slew</b>, is how long a signal takes to change between two voltage levels, such as 20% to 80% (or 10% to 90%). The library chooses the levels. Rising and falling edges each have their own value. It describes <b>one signal\'s edge</b>, not the time from input to output.',
+    analogy: 'A door that swings open quickly lets people through almost at once. A heavy door that creeps open keeps them waiting, even after it has started to move.',
+    when: ['Every time any signal switches.', 'It gets large when a <b>weak gate</b> drives a <b>heavy load</b>: many inputs (high fanout) or a <b>long wire</b>.', 'It also gets worse along a long wire: the far end has a lazier edge than the near end.'],
+    why: ['The next gate sees a lazy input and usually takes <b>longer</b> to respond. Its own output edge can get worse too, so the problem <b>passes down the path</b>.', 'While an input is half way, both pull-up and pull-down transistors can conduct, which <b>wastes power</b>.', 'A slow edge spends longer in the middle, where noise can disturb it more easily.', 'Very slow edges go outside the values the library was measured for, so delay numbers become <b>less trustworthy</b>.'],
+    change: ['<b>Make it sharper</b>: use a stronger driver, add a buffer, split a high-fanout net, or shorten the wire.', '<b>Makes it worse</b>: more load, longer wire, a weaker driver, lower voltage.'],
+    sta: ['Libraries look up delay using <b>input transition and output load</b>, and they also give the output transition.', 'There is a limit called <b>max transition</b> (SDC: <code>set_max_transition</code>; libraries have limits too). Breaking it is a <b>design rule violation</b> even if setup and hold pass.', 'Reports often show a column named <code>Trans</code> or <code>Slew</code>.']
+  },
+  points: ['<b>Transition</b> is measured on one signal. <b>Delay</b> is measured between two signals.', 'The delay formula here is a teaching model. Real libraries use tables or current-source models.', 'The 1.4 ns limit is made up. Real limits come from your library and design rules.'],
+  remember: 'Slew is the slope of one edge. A lazy edge makes the next gate lazy too.',
+  quiz: { q: 'A net has a very slow transition because one gate drives 40 others. What is a good fix?', options: ['Add buffers to split the load', 'Slow the clock down', 'Connect even more gates'], answer: 0, why: 'Each buffer drives only part of the load, so each edge becomes sharper. A slower clock does not change the edge.' }
+});
+
+/* ---------- 5. cell delay: intrinsic + load ---------- */
+delayLesson({
+  id: 'delay-cell', icon: '🧱', title: 'Cell delay: intrinsic and load',
+  idea: 'A gate\'s delay has a part it carries with it and a part that depends on what it has to drive.',
+  options: [{ k: 'size', label: 'Gate size', def: '1', choices: [['1', 'Small gate (X1)'], ['2', 'Medium gate (X2)'], ['4', 'Big gate (X4)']] }],
+  params: [R('load', 'Number of gates being driven (fanout)', 1, 16, 1, 6, 'gates')],
+  steps: p => [
+    'Even with nothing connected outside, a gate takes some time to switch its own insides. This is INTRINSIC delay.',
+    `Now it must charge the inputs of ${sn(p.load)} more gate(s). Each input is a small capacitor. This adds LOAD delay.`,
+    'The slope of the input edge adds a little more. Here the input transition is fixed at 0.8 ns.',
+    'Choose a bigger gate: it pushes more current, so the load part shrinks. But its own input is bigger, so the gate BEFORE it works harder.'
+  ],
+  calc(p) { return STA_CALC.cellDelay({ intrinsic: 0.4, load: p.load, slew: 0.8, kLoad: 0.12 / Number(p.size) }); },
+  result(p) {
+    const d = this.calc(p);
+    return verdict(true, `Cell delay = intrinsic ${sn(d.intrinsic)} + load ${sn(d.fromLoad)} + slew ${sn(d.fromSlew)} = ${sn(d.total)} ns. This X${p.size} gate also loads the gate before it ${p.size} time(s) as much as an X1.`);
+  },
+  draw(t, p) {
+    const d = this.calc(p), n = Math.round(p.load), size = Number(p.size);
+    let s = sx.line(24, 92, 96, 92, 'sx-wire') + sx.cloud(96, 92 - (18 + size * 6), 96 + size * 10, 36 + size * 12, `gate X${size}`, true);
+    const out = 192 + size * 10, shown = Math.floor(1 + (n - 1) * ph(t, 1) + 1e-9);
+    s += sx.line(out, 92, 420, 92, 'sx-wire');
+    // all the receivers hang on the same net: one trunk, then one branch per row
+    if (t >= 1) {
+      for (let row = 0; row * 4 < shown; row++) { const y = 33 + row * 40, last = Math.min(4, shown - row * 4) - 1; s += sx.poly([[420, 92], [420, y], [450 + last * 48, y]], 'sx-wire'); }
+      for (let i = 0; i < shown; i++) s += sx.cloud(430 + (i % 4) * 48, 18 + Math.floor(i / 4) * 40, 40, 30, 'in');
+    }
+    s += sx.t(10, 34, 'signal from the gate before', 'sx-s') + sx.t(430, 190, t >= 1 ? `${shown} gate input(s) to charge` : 'nothing connected yet', 'sx-s sx-b');
+    const X = v => 90 + v * 185, parts = [[0, d.intrinsic, 'sx-bar-q', 'intrinsic', 0], [d.intrinsic, d.intrinsic + d.fromLoad, 'sx-bar-logic', 'load', 1], [d.intrinsic + d.fromLoad, d.total, 'sx-bar-skew', 'slew', 2]];
+    let end = 0;
+    s += sx.t(14, 232, 'Delay', 'sx-b');
+    for (const q of parts) { const f = ph(t, q[4]); if (f > 0) { end = q[0] + (q[1] - q[0]) * f; s += sx.bar(X, q[0], end, 210, q[2], q[3], 34); } }
+    s += sx.axis(X, 262, 2.8, 0.5) + sx.t(Math.min(560, X(end) + 8), 232, `${sn(end)} ns`, 'sx-b');
+    return sx.svg(292, s);
+  },
+  explain: {
+    what: '<b>Cell delay</b> (gate delay) is the time through one standard cell. It helps to split it in two. <b>Intrinsic delay</b> is the part caused by the cell\'s own internal transistors and capacitance, with no external load. <b>Load-dependent delay</b> is the extra time needed to drive the wire and the gate inputs connected to the output.',
+    analogy: 'Delivering water with a bucket. Picking the bucket up takes time even if there is one plant (intrinsic). Watering more plants takes longer (load). A bigger bucket waters them faster, but it is heavier to fill (a bigger input to drive).',
+    when: ['Intrinsic delay is there <b>every time</b> the cell switches.', 'Load delay is large when the output has a <b>high fanout</b> or a <b>long wire</b> attached.'],
+    why: ['Cell delays are usually a major part of a path\'s total.', 'It explains the most common timing fix, <b>gate sizing</b>: a bigger cell can drive a heavy load faster.', 'Bigger is <b>not always better</b>: it uses more area and power, and its larger input slows the stage before it.'],
+    change: ['<b>Fewer receivers or shorter wire</b>: less load delay.', '<b>Bigger drive strength</b> (X2, X4): less load delay, more input capacitance.', '<b>Buffering</b>: let a buffer drive the heavy load.', 'Faster transistor types (often called low-Vt cells) are quicker but leak more power.'],
+    sta: ['Delay comes from the cell\'s table in the <code>.lib</code> file, looked up with input transition and output capacitance. Real tables are <b>not</b> split neatly into these parts and are not straight lines.', 'The output capacitance includes both pin capacitances and wire capacitance.', 'There are limits such as <b>max capacitance</b> and <b>max fanout</b>.']
+  },
+  points: ['Load is really measured as <b>capacitance</b> (for example in femtofarads), not as a count of gates.', 'The numbers and the "divide by size" rule are a teaching model.', 'The study of how to size a chain of gates for the least delay is called <b>logical effort</b>.'],
+  remember: 'Cell delay = its own part + what it has to drive. A bigger gate helps its load but burdens its driver.',
+  quiz: { q: 'You swap a gate for a much bigger one. What else can happen?', options: ['The previous gate gets slower, because it now drives a bigger input', 'The wire becomes shorter', 'Intrinsic delay becomes zero'], answer: 0, why: 'A bigger cell usually has more input capacitance, which is extra load for its driver.' }
+});
+
+/* ---------- 6. clock-to-Q ---------- */
+delayLesson({
+  id: 'delay-clk-q', icon: '🚪', title: 'Clock-to-Q delay',
+  idea: 'A flip-flop does not change its output the instant the clock ticks. It needs a short time.',
+  params: [R('min', 'Earliest clock-to-Q (min)', 0.2, 1, 0.1, 0.4), R('max', 'Latest clock-to-Q (max)', 1.2, 3, 0.1, 1.8)],
+  steps: p => [
+    'D already holds the new value and waits. Q still shows the old value.',
+    'Tick! The rising clock edge arrives at the flip-flop. At this instant Q has not changed yet.',
+    `For at least ${sn(p.min)} ns Q keeps the old value. This is the EARLIEST clock-to-Q delay, used for hold.`,
+    `By ${sn(p.max)} ns Q is surely showing the new value. This is the LATEST clock-to-Q delay, used for setup. Only now does the next logic have a stable input.`
+  ],
+  result: p => verdict(true, `Clock-to-Q is between ${sn(p.min)} ns (for hold) and ${sn(p.max)} ns (for setup). With a 10 ns clock, ${sn(p.max)} ns is already used before the logic even starts.`),
+  draw(t, p) {
+    const X = v => 240 + v * 90, k = Math.min(3, Math.floor(t)), upto = [-0.1, 0.05, p.min, 3.9], from = [-1, -0.1, 0.05, p.min][k], now = from + (upto[k] - from) * Math.min(1, ph(t, k) * 1.25);
+    const cx = v => X(Math.min(v, now));
+    let s = sx.ff(20, 100, 'FF', now >= 0) + sx.t(96, 68, 'CLK', 'sx-s sx-b') + sx.path(`M${X(-1)} 76L${cx(0)} 76` + (now > 0 ? `L${X(0)} 44L${X(now)} 44` : ''), 'sx-clk');
+    s += sx.t(96, 138, 'D', 'sx-s sx-b') + sx.path(`M${X(-1)} 146L${X(-0.7)} 146L${X(-0.7)} 116L${X(4)} 116`, 'sx-sig') + sx.t(96, 208, 'Q', 'sx-s sx-b') + sx.path(`M${X(-1)} 216L${cx(p.min)} 216`, 'sx-sig sx-q');
+    if (now > p.min) {
+      const stop = Math.min(now, p.max), n = Math.max(2, Math.round((stop - p.min) * 7));
+      s += sx.path(`M${X(p.min)} 216` + Array.from({ length: n }, (_, i) => `L${X(p.min + (stop - p.min) * (i + 1) / n)} ${i % 2 ? 216 : 186}`).join(''), 'sx-sig sx-q') + sx.t(X((p.min + p.max) / 2), 176, 'changing', 'sx-s sx-b', 'middle');
+      if (now >= p.max) s += sx.path(`M${X(p.max)} 186L${X(now)} 186`, 'sx-sig sx-q') + sx.t(X(p.max) + 6, 178, 'new value', 'sx-s sx-b');
+    }
+    if (k >= 2) s += span(X(0), X(p.min), 236, 'sx-arc-h') + sx.t(X(p.min) + 8, 241, `min ${sn(p.min)} ns`, 'sx-s sx-b');
+    if (k >= 3) s += span(X(0), X(p.max), 258, 'sx-arc-su') + sx.t(X(p.max) + 8, 263, `max ${sn(p.max)} ns`, 'sx-s sx-b');
+    const guides = sx.guides(X, [0], 30, 272, 'a') + sx.guides(X, [p.min, p.max], 30, 272, 'b');
+    return sx.svg(310, guides + s + sx.cursor(X(now), 30, 220) + sx.key(298, [['a', 'rising clock edge'], ['b', 'Q starts / finishes changing']]));
+  },
+  explain: {
+    what: '<b>Clock-to-Q delay (tcq)</b> is the time from the active clock edge at a flip-flop\'s clock pin until its <b>Q</b> output changes. The latest value is often written <b>tpcq</b> (propagation) and the earliest <b>tccq</b> (contamination).',
+    analogy: 'A traffic light controller gets the signal to change. The lamp turns a short moment later, not at exactly the same instant.',
+    when: ['At every active clock edge where the flip-flop\'s output changes.', 'The data on D must already have met setup time before that edge.', 'It starts when the edge reaches <b>this flip-flop\'s clock pin</b>, which is later than at the clock source because of clock latency.'],
+    why: ['It is the <b>first delay on every register-to-register path</b>. It uses part of the clock period before any logic starts.', 'It limits the top speed even with no logic at all: the period must fit at least clock-to-Q plus setup time.', 'Its <b>earliest</b> value helps hold: it is time during which the old value still survives.'],
+    change: ['<b>More load on Q</b>: slower.', '<b>A slow clock edge</b> at the clock pin: usually slower.', 'The flip-flop\'s size and type, and process, voltage and temperature.', 'If D changes too close to the edge, the flip-flop can go <b>metastable</b>, and then Q may take much longer than normal.'],
+    sta: ['The library stores it as a timing arc from the clock pin (often <code>CK</code> or <code>CLK</code>) to <code>Q</code>.', 'In a report it is the line where the path moves from the launch flip-flop\'s clock pin to its Q pin.', 'Setup: <code>arrival = tcq(max) + logic(max)</code>. Hold: <code>arrival = tcq(min) + logic(min)</code>.']
+  },
+  points: ['Clock-to-Q is a <b>delay</b>. Setup and hold are <b>requirements</b> of the same flip-flop.', 'A latch also has this kind of delay, plus a D-to-Q delay while it is open.', 'The minimum period of a simple path is <code>tcq + logic + setup</code> (before skew and uncertainty).'],
+  remember: 'Every tick, the race starts a little late: tcq comes first.',
+  quiz: { q: 'tcq is 1 ns and setup time is 0.8 ns. With NO logic between two flip-flops (and no skew or uncertainty), what is the smallest clock period?', options: ['1 ns', '1.8 ns', '0.2 ns'], answer: 1, why: 'The data needs 1 ns to appear on Q and must arrive 0.8 ns before the next edge.' }
+});
+
+/* ---------- 7. net / wire delay ---------- */
+delayLesson({
+  id: 'delay-wire', icon: '🧵', title: 'Net (wire) delay',
+  idea: 'Metal wires are not instant. The far end of a long wire charges later and more slowly.',
+  params: [R('len', 'Wire length', 0.4, 4, 0.2, 2, 'mm')], toggles: [['rep', 'Add a repeater (buffer) in the middle']],
+  steps: () => [
+    'The driver switches from 0 to 1. The wire has resistance (R) and capacitance (C) spread all along it.',
+    'The near end charges first. Charge must squeeze through the wire\'s resistance to reach further.',
+    'The middle follows later, and the far end later still, with a lazier edge.',
+    'Compare the totals. Without a repeater, a wire twice as long has much more than twice the delay. A repeater splits it into two short pieces.'
+  ],
+  result(p) {
+    const a = STA_CALC.wire({ len: p.len }), b = STA_CALC.wire({ len: p.len, repeater: true });
+    return verdict(!p.rep || b <= a, `Wire delay ${sn(p.rep ? b : a)} ns${p.rep ? ` with a repeater (${sn(a)} ns without). ${b < a ? 'The repeater helps on this length.' : 'On a wire this short the repeater makes it SLOWER.'}` : ' without a repeater. Try doubling the length.'}`);
+  },
+  draw(t, p) {
+    const total = STA_CALC.wire({ len: p.len }), withRep = STA_CALC.wire({ len: p.len, repeater: true });
+    let s = sx.t(46, 24, 'driver', 'sx-s sx-b', 'middle') + sx.cloud(14, 34, 66, 40, 'out', true) + sx.line(80, 54, 560, 54, 'sx-wire') + sx.cloud(560, 34, 66, 40, 'in') + sx.t(593, 24, 'receiver', 'sx-s sx-b', 'middle');
+    for (let i = 0; i < 8; i++) { if (p.rep && (i === 3 || i === 4)) continue; const x = 118 + i * 56; s += sx.rect(x - 16, 47, 24, 14, 'sx-bar-logic', 3) + sx.line(x + 22, 54, x + 22, 78, 'sx-wire') + sx.line(x + 13, 78, x + 31, 78, 'sx-wire') + sx.line(x + 13, 85, x + 31, 85, 'sx-wire'); }
+    if (p.rep) s += sx.cloud(286, 36, 74, 36, 'repeater', true);
+    s += sx.dot(150, 54, 'sx-dot sx-ink', 6) + sx.dot(320, 54, 'sx-dot sx-bad', 6) + sx.dot(528, 54, 'sx-dot sx-alt', 6) + sx.t(150, 104, 'near', 'sx-s sx-b', 'middle') + sx.t(320, 104, 'middle', 'sx-s sx-b', 'middle') + sx.t(528, 104, 'far', 'sx-s sx-b', 'middle');
+    // voltage at the three probe points. Without a repeater: delay to a point a fraction f along the wire (Elmore estimate)
+    if (!p.rep) {
+      const r = 0.5, c = 0.2, tau = f => r * c * p.len * p.len * (f - f * f / 2) + r * p.len * f * 0.05;
+      const window = Math.max(0.1, total * 2.6), X = v => 70 + v * (510 / window), shownTo = window * Math.min(1, t / 3);
+      [[0.15, 'sx-sig', 'near'], [0.5, 'sx-sig sx-bad', 'middle'], [1, 'sx-sig sx-q', 'far']].forEach(q => { s += wave(X, 210, 72, u => 1 - Math.exp(-u * 0.69 / tau(q[0])), window, q[1], shownTo); });
+      s += sx.line(70, 174, 580, 174, 'sx-edge') + sx.t(584, 178, '50%', 'sx-s') + sx.t(10, 134, 'Voltage', 'sx-s sx-b') + sx.t(580, 228, 'time →', 'sx-s sx-b', 'end') + sx.line(70, 210, 580, 210, 'sx-axis');
+      s += sx.t(76, 126, 'black: near  ·  red: middle  ·  green: far', 'sx-s sx-b');
+    } else s += sx.t(320, 150, 'The repeater receives a tired signal halfway and sends out a fresh, sharp one.', 'sx-s sx-b', 'middle') + sx.t(320, 178, 'It costs a little delay of its own, plus area and power.', 'sx-s', 'middle');
+    const max = Math.max(total, withRep, 0.1), bar = (y, name, v, on) => sx.t(14, y + 17, name, 'sx-s sx-b') + sx.rect(140, y, Math.max(3, 390 * v / max), 24, on ? 'sx-bar-skew' : 'sx-bar-ext', 5) + sx.t(148 + Math.max(3, 390 * v / max), y + 17, `${v.toFixed(3)} ns`, 'sx-s sx-b');
+    if (t >= 3) s += bar(240, 'no repeater', total, !p.rep) + bar(272, 'with repeater', withRep, p.rep);
+    return sx.svg(306, s);
+  },
+  explain: {
+    what: '<b>Net delay</b> (also <b>wire</b> or <b>interconnect delay</b>) is the time for a signal to travel along the metal from a gate\'s output pin to the input pin of the next gate. Different receivers on the same net can have <b>different</b> net delays.',
+    analogy: 'A long, thin garden hose with soft walls. Turn on the tap: water pressure rises quickly near the tap, but slowly at the far end, because the hose itself has to fill up first.',
+    when: ['On every connection between pins.', 'It is tiny on short local wires and large on <b>long wires crossing the chip</b>, or on wires that are detoured because the area is crowded.', 'Before routing it is only an <b>estimate</b>. After routing, it is based on the real wire shapes.'],
+    why: ['On advanced chip processes wires are very thin, so their resistance is high. On long paths, wire delay can be as important as gate delay, or more.', 'It is why a design can pass timing <b>before layout and fail after</b>.', 'It depends on <b>placement</b>: two connected cells placed far apart give a slow path.'],
+    change: ['<b>Longer wire</b>: more R and more C, so delay grows roughly with <b>length squared</b>.', '<b>Wider or higher metal layers</b>: usually lower resistance.', '<b>Repeaters</b> break a long wire into short pieces.', '<b>Better placement</b> and shorter routes help most.'],
+    sta: ['The wire\'s R and C are extracted from the layout, commonly into a <code>SPEF</code> file.', 'Tools compute delay and slew at each receiver using accurate methods. <b>Elmore delay</b> is a quick first estimate: for one even wire, <code>R × (C/2 + C_load)</code>.', 'In a report it shows as a line marked <b>net</b>, or it is merged into the next cell\'s line.', 'The wire\'s capacitance is also <b>load</b> for the driving gate, so it increases cell delay too.']
+  },
+  points: ['A wire slows a path <b>twice</b>: its own net delay, and extra load on the driving cell.', 'The R and C per millimetre here are made up to show the shape of the effect.', 'Clock wires have delay too: that is part of clock network latency.'],
+  remember: 'Long wire, big delay: it grows roughly with length squared. Repeaters tame it.',
+  quiz: { q: 'Roughly how does the delay of a long unbuffered wire change if its length doubles?', options: ['It stays the same', 'It doubles exactly', 'It becomes about four times larger'], answer: 2, why: 'Both resistance and capacitance double, and their product sets the delay. The receiver load makes it slightly less than four times.' }
+});
+
+/* ---------- 8. crosstalk delay ---------- */
+delayLesson({
+  id: 'delay-crosstalk', icon: '👥', title: 'Crosstalk (delta) delay',
+  idea: 'Wires that run side by side disturb each other. A neighbour can make your signal later or earlier.',
+  options: [{ k: 'nb', label: 'Neighbour wire', def: 'opposite', choices: [['quiet', 'Neighbour is quiet'], ['opposite', 'Switches the OPPOSITE way'], ['same', 'Switches the SAME way']] }],
+  params: [R('cc', 'How strongly the wires are coupled', 0.1, 0.6, 0.05, 0.4, ''), R('gap', 'How far apart in time they switch', 0, 3, 0.1, 0, 'ns')],
+  steps: p => [
+    'Two long wires run next to each other. Between them is a small unwanted capacitor, the coupling capacitance.',
+    'Our wire, the VICTIM, starts to rise. The neighbour is called the AGGRESSOR.',
+    p.nb === 'quiet' ? 'The neighbour stays still, so the victim behaves normally.' : p.gap > 1 ? 'The neighbour switches at a very different time, so it does not change the victim\'s delay here.' : p.nb === 'opposite' ? 'The neighbour moves the opposite way. The victim must supply extra charge to the capacitor between them, so it is SLOWER.' : 'The neighbour moves the same way and helps charge the victim, so the victim is FASTER.',
+    'The difference from the quiet case is the delta delay. STA must consider the harmful direction for each check.'
+  ],
+  calc(p) { return STA_CALC.crosstalk({ base: 1, coupling: p.cc, neighbour: p.nb, overlap: p.gap <= 1 }); },
+  result(p) {
+    const r = this.calc(p);
+    return verdict(Math.abs(r.delta) < 1e-9, `Victim wire delay ${sn(r.delay)} ns (1 ns when the neighbour is quiet). Delta delay ${r.delta > 0 ? '+' : ''}${sn(r.delta)} ns. ${r.delta > 1e-9 ? 'Later: dangerous for SETUP on a data path.' : r.delta < -1e-9 ? 'Earlier: dangerous for HOLD on a data path.' : 'No change.'}`);
+  },
+  draw(t, p) {
+    const r = this.calc(p), X = v => 90 + v * 82, start = 1.6, k = Math.min(3, Math.floor(t)), now = [0.5, start + 0.1, 5, 6][k] * 1, shown = k === 0 ? 0.9 * ph(t, 0) : k === 1 ? 0.9 + (start + 0.4 - 0.9) * ph(t, 1) : k === 2 ? start + 0.4 + (6 - start - 0.4) * ph(t, 2) : 6;
+    const aggAt = start + (p.nb === 'quiet' ? 0 : p.gap);
+    const victim = d => rampUp(start + d, 0.9), agg = u => p.nb === 'quiet' ? 0 : p.nb === 'same' ? rampUp(aggAt, 0.9)(u) : 1 - rampUp(aggAt, 0.9)(u);
+    let s = sx.t(10, 52, 'aggressor', 'sx-s sx-b') + wave(X, 70, 40, agg, 6, 'sx-sig sx-bad', shown);
+    for (let i = 0; i < 6; i++) { const x = 150 + i * 74; s += sx.line(x, 82, x, 92, 'sx-guide') + sx.line(x - 9, 92, x + 9, 92, 'sx-wire') + sx.line(x - 9, 98, x + 9, 98, 'sx-wire') + sx.line(x, 98, x, 108, 'sx-guide'); }
+    s += sx.t(585, 100, 'coupling', 'sx-s') + sx.t(10, 156, 'victim', 'sx-s sx-b') + sx.line(X(0), 150, X(6), 150, 'sx-edge') + sx.t(X(6) + 4, 154, '50%', 'sx-s');
+    s += wave(X, 175, 50, victim(1), 6, 'sx-guide', shown) + wave(X, 175, 50, victim(r.delay), 6, 'sx-sig sx-q', shown);
+    let guides = '';
+    if (k >= 3) {
+      guides = sx.guides(X, [start], 24, 236, 'a') + sx.guides(X, [start + 1, start + r.delay], 110, 236, 'b');
+      s += span(X(start), X(start + 1), 204, 'sx-arc-h') + sx.t(X(start + Math.max(1, r.delay)) + 10, 209, 'quiet: 1 ns', 'sx-s sx-b') + span(X(start), X(start + r.delay), 228, 'sx-arc-su') + sx.t(X(start + Math.max(1, r.delay)) + 10, 233, `now: ${sn(r.delay)} ns`, 'sx-s sx-b');
+    }
+    return sx.svg(284, guides + s + sx.cursor(X(shown), 24, 184) + sx.t(14, 250, 'thin dashed line = the victim with a quiet neighbour', 'sx-s') + sx.key(272, [['a', 'victim starts'], ['b', 'victim reaches 50%']]));
+  },
+  explain: {
+    what: '<b>Crosstalk delta delay</b> is the <b>change</b> in a signal\'s delay caused by a nearby wire switching. The wire we care about is the <b>victim</b>, the neighbour is the <b>aggressor</b>. The cause is the <b>coupling capacitance</b> between them. (Crosstalk can also create a voltage bump on a quiet wire, called a <b>glitch</b> or noise, which is a related but separate check.)',
+    analogy: 'Walking in a crowded corridor. Someone beside you walking the same way hardly slows you. Someone pushing the opposite way slows you down. Someone who passed a minute ago has no effect.',
+    when: ['Wires run <b>close together for a long distance</b>.', 'The victim and the aggressor switch <b>at about the same time</b> (their timing windows overlap).', 'It is stronger on dense, advanced processes, where wires are close and tall.'],
+    why: ['An <b>opposite</b> switch makes the victim later. On a data path that can break <b>setup</b>.', 'A <b>same-direction</b> switch makes it earlier. On a data path that can break <b>hold</b>.', 'On a <b>clock wire</b> it shifts the clock edge itself, which can disturb many flip-flops.', 'A design can pass timing without crosstalk and fail once it is included.'],
+    change: ['<b>More spacing</b> between the wires.', '<b>Shielding</b>: put a quiet power or ground wire between them. Clocks are often protected this way.', '<b>Shorter parallel runs</b>, or moving one wire to another layer.', '<b>Stronger victim driver</b>, or a weaker (slower) aggressor.'],
+    sta: ['This analysis is called <b>signal integrity (SI)</b> analysis. Sign-off timing tools can include it.', 'It needs coupling capacitances from extraction.', 'The tool checks the <b>timing windows</b> to see whether the two nets can really switch together, then adds the delta to late or early arrival times.', 'Reports can show it in a column such as <code>Delta</code>.']
+  },
+  points: ['The same neighbour can be harmful for setup in one case and for hold in another.', 'The "quiet = 1 ns" model and the 1 ns overlap window are simplifications to show the idea.', 'Crosstalk fixes are mostly done by the place-and-route tool: spacing, shielding and re-routing.'],
+  remember: 'Opposite pushes you later, same pulls you earlier, far apart in time does nothing.',
+  quiz: { q: 'An aggressor switches opposite to a data-path victim at the same moment. Which check is in more danger?', options: ['Setup, because the data arrives later', 'Hold, because the data arrives earlier', 'Neither'], answer: 0, why: 'The opposite switch slows the victim, which eats setup time.' }
+});
+
+/* ---------- 9. clock latency ---------- */
+delayLesson({
+  id: 'delay-clock', icon: '🕰️', title: 'Clock latency: source and network',
+  idea: 'The clock is a signal too. It takes time to reach each flip-flop, and not always the same time.',
+  params: [R('src', 'Source latency', 0.2, 2, 0.1, 0.8), R('netA', 'Network latency to FF A', 0.2, 2, 0.1, 1), R('netB', 'Network latency to FF B', 0.2, 2, 0.1, 1.6)],
+  steps: p => [
+    'The clock edge is created at its source, such as an oscillator or a PLL.',
+    `It travels to the point where the clock is defined, here the chip's clk pin. This takes ${sn(p.src)} ns: SOURCE latency.`,
+    'From the clk pin it spreads through the clock tree: buffers and wires. This is NETWORK latency. Each flip-flop has its own value.',
+    'The two flip-flops see the same edge at different moments. That DIFFERENCE is called clock skew.'
+  ],
+  result(p) {
+    const skew = p.netB - p.netA;
+    return verdict(true, `Edge reaches FF A at ${sn(p.src + p.netA)} ns and FF B at ${sn(p.src + p.netB)} ns. Skew (B minus A) = ${skew > 1e-9 ? '+' : ''}${sn(skew)} ns. The shared source latency cancels out of the skew.`);
+  },
+  draw(t, p) {
+    const k = Math.min(3, Math.floor(t));
+    let s = sx.cloud(8, 62, 76, 44, 'PLL', k === 0) + sx.line(84, 84, 200, 84, 'sx-clk') + sx.dot(200, 84, 'sx-port', 10) + sx.t(200, 62, 'clk pin', 'sx-s sx-b', 'middle');
+    s += sx.line(200, 84, 270, 84, 'sx-clk') + sx.line(270, 40, 270, 136, 'sx-clk') + sx.line(270, 40, 520, 40, 'sx-clk') + sx.line(270, 136, 520, 136, 'sx-clk') + sx.cloud(330, 24, 90, 32, 'buffers') + sx.cloud(330, 120, 90, 32, 'buffers') + sx.cloud(520, 18, 70, 44, 'FF A', t >= 3) + sx.cloud(520, 114, 70, 44, 'FF B', t >= 3);
+    const far = Math.max(p.netA, p.netB);
+    if (k < 2) { const x = k === 0 ? 84 : 84 + 116 * ph(t, 1); s += sx.dot(x, 84, 'sx-dot sx-ck', 9); }
+    else { const gone = far * ph(t, 2); [[p.netA, 40], [p.netB, 136]].forEach(q => { const at = sx.along([[200, 84], [270, 84], [270, q[1]], [520, q[1]]], Math.min(1, gone / q[0])); s += sx.dot(at[0], at[1], 'sx-dot sx-ck', 9); }); }
+    const X = v => 100 + v * 108, tmax = 4.2, a = p.src + p.netA, b = p.src + p.netB;
+    s += sx.t(10, 192, 'at FF A', 'sx-s sx-b') + sx.bar(X, 0, p.src, 176, 'sx-bar-ext', 'source') + sx.bar(X, p.src, a, 176, 'sx-bar-q', 'network');
+    s += sx.t(10, 228, 'at FF B', 'sx-s sx-b') + sx.bar(X, 0, p.src, 212, 'sx-bar-ext', 'source') + sx.bar(X, p.src, b, 212, 'sx-bar-alt', 'network');
+    s += sx.axis(X, 252, tmax, 1);
+    if (k >= 3) s += span(X(Math.min(a, b)), X(Math.max(a, b)), 168, 'sx-arc-su') + sx.t(X(Math.max(a, b)) + 8, 173, `skew ${sn(p.netB - p.netA)} ns`, 'sx-s sx-b');
+    const guides = sx.guides(X, [0, p.src], 164, 262, 'a') + sx.guides(X, [a, b], 164, 262, 'b');
+    return sx.svg(302, guides + s + sx.key(290, [['a', 'edge made / at clk pin'], ['b', 'edge arrives at a flip-flop']]));
+  },
+  explain: {
+    what: '<b>Clock latency</b> is how long a clock edge takes to arrive. <b>Source latency</b> is the delay from the real clock origin to the point where you <b>define</b> the clock (such as a port or pin). <b>Network latency</b> is the delay from that point to a flip-flop\'s clock pin. The on-chip clock tree delay is often called <b>insertion delay</b>. Total latency = source + network.',
+    analogy: 'A radio announcement of the time. It takes a moment to reach your town (source), then a different moment to reach each house through local speakers (network). Houses that hear it at different moments disagree slightly about "now".',
+    when: ['Every clock edge has to travel, so latency is there on <b>every tick</b>.', 'Before the clock tree is built, the tool treats the clock as <b>ideal</b> and you give it <b>estimates</b>.', 'After <b>clock tree synthesis (CTS)</b>, the network latency is calculated from the real buffers and wires.'],
+    why: ['The <b>difference</b> between latencies is <b>skew</b>. When the capture clock is later, setup gets more time and hold gets harder.', 'For a path between two flip-flops on the same clock, latency that both share mostly <b>cancels</b>. (With on-chip variation, analysis needs care: see the OCV lesson.)', 'For <b>input and output</b> paths the other end is outside the chip, so the on-chip latency does <b>not</b> automatically cancel.', 'A deeper clock tree has more buffers: more power, and more room for variation.'],
+    change: ['Clock tree <b>depth</b>, buffer sizes and wire lengths.', 'How far the flip-flops are from the clock entry point.', 'Clock tree synthesis tries to <b>balance</b> branches, and sometimes adds skew on purpose (<b>useful skew</b>).', 'Process, voltage and temperature.'],
+    sta: ['Network latency estimate: <code>set_clock_latency 1.2 [get_clocks clk]</code>', 'Source latency: <code>set_clock_latency -source 0.8 [get_clocks clk]</code>', 'After CTS: <code>set_propagated_clock [get_clocks clk]</code> makes the tool calculate network latency from the real tree. Your source latency value is still used.', 'Reports show lines like <code>clock source latency</code> and <code>clock network delay (ideal)</code> or <code>(propagated)</code>.']
+  },
+  points: ['<b>Latency</b> is the time to arrive. <b>Skew</b> is a difference in arrival. <b>Jitter</b> is edge-to-edge wobble. They are three different things.', 'Do not add an estimated network latency on top of a real propagated clock tree.', 'On an FPGA, the clock routing is pre-built, and the tool already knows its delays.'],
+  remember: 'Source: to the clock definition point. Network: from there to the flip-flop. Their differences make skew.',
+  quiz: { q: 'FF A and FF B share the same source latency, and it increases by 1 ns. What happens to the skew between them?', options: ['It increases by 1 ns', 'It does not change', 'It becomes zero'], answer: 1, why: 'Both edges arrive 1 ns later, so the difference between them stays the same.' }
+});
+
+/* ---------- 10. input delay ---------- */
+delayLesson({
+  id: 'delay-input', icon: '📥', title: 'Input delay',
+  idea: 'Data from outside your chip has already used part of the clock period. STA cannot see that unless you tell it.',
+  params: [R('ext', 'Outside flip-flop clock-to-Q', 0.2, 4, 0.1, 2), R('wire', 'Board wire delay', 0.2, 3, 0.1, 1), R('comb', 'Logic inside your chip', 1, 9, 0.5, 5)],
+  steps: p => [
+    'A clock tick. A flip-flop in ANOTHER chip sends data. Your tool knows nothing about that chip.',
+    `The data crosses the other chip's output (${sn(p.ext)} ns) and the board wire (${sn(p.wire)} ns). It reaches your input port at ${sn(p.ext + p.wire)} ns.`,
+    `That time is the INPUT DELAY: ${sn(p.ext + p.wire)} ns. It is already spent when the data enters your chip.`,
+    'Only the rest of the clock period is left for your own logic and your flip-flop\'s setup time.'
+  ],
+  base: { T: 10, tsu: 0.8 },
+  calc(p) { return STA_CALC.inputPath({ T: this.base.T, idly: p.ext + p.wire, comb: p.comb, tsu: this.base.tsu }); },
+  result(p) {
+    const r = this.calc(p);
+    return verdict(r.slack >= -1e-9, `Input delay ${sn(p.ext + p.wire)} ns leaves ${sn(this.base.T - p.ext - p.wire - this.base.tsu)} ns for your logic (10 ns clock, 0.8 ns setup). Slack ${sn(r.slack)} ns.`);
+  },
+  code: p => [`set_input_delay -max ${sn(p.ext + p.wire)} -clock clk [get_ports din]`, '# -min needs the EARLIEST outside clock-to-Q plus the SHORTEST board delay'],
+  draw(t, p) {
+    const k = Math.min(3, Math.floor(t)), idly = p.ext + p.wire, r = this.calc(p);
+    let s = sx.rect(8, 24, 190, 108, 'sx-chip', 14) + sx.t(20, 40, 'OTHER CHIP', 'sx-s sx-b') + sx.rect(330, 24, 302, 108, 'sx-chip', 14) + sx.t(344, 40, 'YOUR CHIP', 'sx-s sx-b');
+    s += sx.line(124, 92, 360, 92, 'sx-wire') + sx.line(422, 92, 546, 92, 'sx-wire') + sx.ff(62, 68, 'FF out', k === 0) + sx.dot(330, 92, 'sx-port', 9) + sx.t(322, 118, 'din', 'sx-s sx-b', 'end') + sx.t(264, 80, 'board wire', 'sx-s', 'middle') + sx.cloud(432, 70, 78, 44, 'logic', k === 3) + sx.line(360, 92, 432, 92, 'sx-wire') + sx.ff(546, 68, 'your FF');
+    const at = k === 0 ? [124, 92] : k === 1 ? sx.along([[124, 92], [330, 92]], ph(t, 1)) : k === 2 ? [330, 92] : sx.along([[330, 92], [546, 92]], ph(t, 3));
+    s += sx.dot(at[0], at[1], 'sx-dot', 10);
+    const end = Math.max(this.base.T, r.arrival) + 0.5, X = v => 40 + v * (556 / end);
+    s += sx.bar(X, 0, p.ext, 164, 'sx-bar-ext', 'FF') + sx.bar(X, p.ext, idly, 164, 'sx-bar-ext', 'board');
+    if (k >= 2) s += span(X(0), X(idly), 204, 'sx-arc-h') + sx.t(X(idly) + 8, 209, `input delay ${sn(idly)} ns`, 'sx-s sx-b');
+    if (k >= 3) s += sx.bar(X, idly, r.arrival, 164, r.slack >= -1e-9 ? 'sx-bar-logic' : 'sx-bar-bad', 'your logic') + sx.bar(X, this.base.T - this.base.tsu, this.base.T, 222, 'sx-bar-su', 'setup');
+    s += sx.axis(X, 262, Math.floor(end), end > 14 ? 2 : 1);
+    const guides = sx.guides(X, [0, this.base.T], 154, 272, 'a') + sx.guides(X, [idly], 154, 272, 'b');
+    return sx.svg(312, guides + s + sx.key(300, [['a', 'clock edge'], ['b', 'data reaches your input port']]));
+  },
+  explain: {
+    what: '<b>Input delay</b> tells STA when data arrives at an input port, measured <b>from a clock edge</b>. It stands for everything outside your design: the sending device\'s clock-to-Q, any logic out there, and the board wire. It is a <b>constraint you write</b>, not something the tool can calculate from your chip.',
+    analogy: 'You get 10 minutes to finish a task, but the file reaches your desk 3 minutes late. You really have 7. If nobody tells your planner about the 3 minutes, the plan will wrongly say you have 10.',
+    when: ['On every input port that is captured by a clock inside your design.', 'The data comes from another chip on the board, or from another block that will be joined to yours later.', 'It is not for clock ports. Truly asynchronous inputs need synchronizers and suitable exceptions instead.'],
+    why: ['<b>Without it, the input path is not properly checked.</b> The report can look clean while the real board fails.', 'Too small a value is <b>optimistic</b>: your logic seems to have more time than it has.', 'Too large a value is <b>pessimistic</b>: tools work hard to fix a problem that does not exist.'],
+    change: ['<code>-max</code>: the <b>latest</b> arrival = slowest outside clock-to-Q + longest board delay. Used for <b>setup</b>.', '<code>-min</code>: the <b>earliest</b> arrival = fastest outside clock-to-Q + shortest board delay. Used for <b>hold</b>.', 'The numbers come from the other device\'s <b>datasheet</b> and the board design.', 'Differences in how the clock reaches the two chips must be included too.'],
+    sta: ['Setup slack for this path: <code>(T + skew − setup − uncertainty) − (input delay + logic)</code>.', 'In a report, the path starts at the input port with a line such as <code>input external delay</code>.', 'The <code>-clock</code> option can name a <b>virtual clock</b>: a clock that exists only outside your design.']
+  },
+  points: ['Input delay describes the <b>outside world</b>. It does not add any delay hardware to your chip.', 'The demo assumes both chips get the same clock edge at the same moment.', 'Give both <code>-max</code> and <code>-min</code>.'],
+  remember: 'Input delay = time already spent before the data reaches your door.',
+  quiz: { q: 'The clock is 10 ns, input delay (max) is 6 ns and your flip-flop needs 0.8 ns setup. How much time is left for your logic (ignore skew and uncertainty)?', options: ['10 ns', '4 ns', '3.2 ns'], answer: 2, why: '10 − 6 − 0.8 = 3.2 ns.' }
+});
+
+/* ---------- 11. output delay ---------- */
+delayLesson({
+  id: 'delay-output', icon: '📤', title: 'Output delay',
+  idea: 'After data leaves your chip, the outside world still needs time. You must leave that time free.',
+  params: [R('comb', 'Logic inside your chip', 1, 9, 0.5, 5), R('wire', 'Board wire delay', 0.2, 3, 0.1, 1), R('ext', 'Setup time of the outside flip-flop', 0.2, 3, 0.1, 1.5)],
+  steps: p => [
+    'A clock tick. Your flip-flop sends data toward another chip.',
+    'The data passes your own clock-to-Q (1 ns) and your logic, and reaches your output port.',
+    `Outside, it still has to cross the board wire (${sn(p.wire)} ns) and arrive early enough for the other flip-flop's setup time (${sn(p.ext)} ns).`,
+    `That reserved time is the OUTPUT DELAY (max): ${sn(p.wire + p.ext)} ns. Your part must finish before it begins.`
+  ],
+  base: { T: 10, tcq: 1 },
+  calc(p) { return STA_CALC.outputPath({ T: this.base.T, tcq: this.base.tcq, comb: p.comb, odly: STA_CALC.outputDelay({ tsu: p.ext, wireMax: p.wire }).max }); },
+  result(p) {
+    const r = this.calc(p), od = p.wire + p.ext;
+    return verdict(r.slack >= -1e-9, `Output delay ${sn(od)} ns means your data must be at the port by ${sn(this.base.T - od)} ns. It gets there at ${sn(this.base.tcq + p.comb)} ns. Slack ${sn(r.slack)} ns (10 ns clock).`);
+  },
+  code: p => [`set_output_delay -max ${sn(p.wire + p.ext)} -clock clk [get_ports dout]`, '# -min = SHORTEST board delay minus the outside flip-flop\'s hold time (it can be negative)'],
+  draw(t, p) {
+    const k = Math.min(3, Math.floor(t)), od = p.wire + p.ext, r = this.calc(p), here = this.base.tcq + p.comb;
+    let s = sx.rect(8, 24, 302, 108, 'sx-chip', 14) + sx.t(20, 40, 'YOUR CHIP', 'sx-s sx-b') + sx.rect(442, 24, 190, 108, 'sx-chip', 14) + sx.t(456, 40, 'OTHER CHIP', 'sx-s sx-b');
+    s += sx.line(94, 92, 516, 92, 'sx-wire') + sx.ff(32, 68, 'your FF', k === 0) + sx.cloud(150, 70, 90, 44, 'logic', k === 1) + sx.dot(310, 92, 'sx-port', 9) + sx.t(318, 118, 'dout', 'sx-s sx-b') + sx.t(378, 80, 'board wire', 'sx-s', 'middle') + sx.ff(516, 68, 'FF in', k >= 2);
+    const at = k === 0 ? [94, 92] : k === 1 ? sx.along([[94, 92], [310, 92]], ph(t, 1)) : k === 2 ? sx.along([[310, 92], [516, 92]], ph(t, 2)) : [516, 92];
+    s += sx.dot(at[0], at[1], 'sx-dot', 10);
+    const end = Math.max(this.base.T, here + od) + 0.5, X = v => 40 + v * (556 / end);
+    if (k >= 1) s += sx.bar(X, 0, this.base.tcq, 164, 'sx-bar-q', 'tcq') + sx.bar(X, this.base.tcq, here, 164, r.slack >= -1e-9 ? 'sx-bar-logic' : 'sx-bar-bad', 'your logic');
+    if (k >= 2) s += sx.bar(X, this.base.T - od, this.base.T - p.ext, 204, 'sx-bar-ext', 'board') + sx.bar(X, this.base.T - p.ext, this.base.T, 204, 'sx-bar-su', 'setup');
+    if (k >= 3) s += span(X(this.base.T - od), X(this.base.T), 240, 'sx-arc-h') + sx.t(X(this.base.T - od) - 8, 245, `output delay ${sn(od)} ns`, 'sx-s sx-b', 'end');
+    s += sx.axis(X, 262, Math.floor(end), end > 14 ? 2 : 1);
+    const guides = sx.guides(X, [0, this.base.T], 154, 272, 'a') + sx.guides(X, [here, this.base.T - od], 154, 272, 'b');
+    return sx.svg(312, guides + s + sx.key(300, [['a', 'clock edge'], ['b', 'data at port / latest allowed']]));
+  },
+  explain: {
+    what: '<b>Output delay</b> tells STA how much time the outside world needs <b>after</b> your output port, measured against a clock edge. For setup (<code>-max</code>) it is usually the longest board delay plus the receiving device\'s <b>setup time</b>. It is a constraint: a reservation, not delay hardware in your chip.',
+    analogy: 'A letter must be at the office by 5 pm, and the post takes 2 hours. So you must post it by 3 pm. The 2 hours are not your work, but you must leave room for them.',
+    when: ['On every output port whose data another device or block captures with a clock.', 'When your design\'s output feeds a block that will be connected later.'],
+    why: ['<b>Without it, the tool does not know your output has a deadline</b>, so the path is not properly checked.', 'It stops your internal logic from using time the outside world needs.', 'If a long output path fails, a common fix is to <b>register the output</b> so that almost no logic sits between the last flip-flop and the port.'],
+    change: ['<code>-max</code> = longest board delay + the receiver\'s setup time. Used for <b>setup</b>.', '<code>-min</code> = shortest board delay − the receiver\'s hold time. Used for <b>hold</b>. It is often <b>negative</b>, and that is normal.', 'Values come from the receiver\'s datasheet and the board design, including clock differences between the chips.'],
+    sta: ['Setup slack for this path: <code>(T + skew − output delay − uncertainty) − (tcq + logic)</code>. The demo uses zero skew and uncertainty.', 'In a report, the required time includes a line such as <code>output external delay</code>.', 'Tools often add an external load too (SDC: <code>set_load</code>), because the outside wire affects your last gate\'s delay.']
+  },
+  points: ['<b>Input</b> delay is time already used. <b>Output</b> delay is time still needed.', 'The sign of <code>-min</code> surprises many beginners: the hold time is <b>subtracted</b>.', 'The demo assumes both chips get the same clock edge at the same moment.'],
+  remember: 'Output delay = time you must leave free for the outside world.',
+  quiz: { q: 'The receiver needs 1.5 ns setup and the board wire takes up to 1 ns. What is set_output_delay -max?', options: ['0.5 ns', '2.5 ns', '1.5 ns'], answer: 1, why: 'Both happen after your port: 1 + 1.5 = 2.5 ns.' }
+});
+
+/* ---------- 12. path delay ---------- */
+lesson({
+  id: 'delays', group: DELAY_GROUP, icon: '🏔️', title: 'Path delay: slowest and fastest',
+  idea: 'Between two flip-flops there are many routes. The slowest one matters for setup, the fastest one for hold.',
+  params: [R('g', 'Delay of each gate', 0.5, 3, 0.1, 2), R('n', 'Delay of the shortcut', 0.2, 3, 0.1, 0.6), R('tcq', 'Clock-to-Q', 0.2, 2, 0.1, 0.8)],
+  dur: p => p.tcq + Math.max(3 * p.g, p.n) + 1.5,
+  result: p => verdict(true, `Longest path (max delay) = ${sn(p.tcq + Math.max(3 * p.g, p.n))} ns, used for SETUP. Shortest path (min delay) = ${sn(p.tcq + Math.min(3 * p.g, p.n))} ns, used for HOLD.`),
+  say(t, p) {
+    const fast = p.tcq + Math.min(3 * p.g, p.n), slow = p.tcq + Math.max(3 * p.g, p.n);
+    return t < p.tcq ? 'Both signals leave the same flip-flop.' : t < fast ? 'The two signals take different routes…' : t < slow ? 'The quick one has arrived: it could disturb the HOLD window.' : 'The slow one has arrived: it decides how fast the clock can be.';
+  },
+  draw(t, p) {
+    const long = 3 * p.g, tmax = this.dur(p), X = v => 70 + v * (520 / tmax);
+    const top = [[112, 92], [160, 92], [180, 60], [470, 60], [500, 92], [528, 92]], bot = [[112, 92], [160, 92], [180, 142], [470, 142], [500, 92], [528, 92]];
+    const slowTop = long >= p.n;
+    const a = sx.along(top, (t - p.tcq) / long), b = sx.along(bot, (t - p.tcq) / p.n);
+    let s = sx.ff(50, 66, 'FF 1') + sx.ff(528, 66, 'FF 2') + sx.poly(top, 'sx-wire' + (slowTop ? ' sx-slow' : '')) + sx.poly(bot, 'sx-wire' + (slowTop ? '' : ' sx-slow'));
+    [200, 295, 390].forEach(x => s += sx.cloud(x, 38, 66, 44, `${sn(p.g)}`));
+    s += sx.cloud(260, 120, 120, 44, `shortcut ${sn(p.n)}`) + sx.dot(a[0], a[1], 'sx-dot') + sx.dot(b[0], b[1], 'sx-dot sx-alt');
+    s += sx.t(14, 214, 'top', 'sx-b') + sx.bar(X, 0, p.tcq, 196, 'sx-bar-q', 'tcq') + sx.bar(X, p.tcq, p.tcq + long, 196, 'sx-bar-logic', `${sn(long)} ns`)
+      + sx.t(14, 250, 'short', 'sx-b') + sx.bar(X, 0, p.tcq, 232, 'sx-bar-q', 'tcq') + sx.bar(X, p.tcq, p.tcq + p.n, 232, 'sx-bar-alt', `${sn(p.n)} ns`)
+      + sx.axis(X, 272, tmax, 1) + sx.cursor(X(t), 188, 268);
+    return sx.svg(298, s);
+  },
+  explain: {
+    what: '<b>Path delay</b> is the total of all the delays from a path\'s <b>start point</b> to its <b>end point</b>. Between the same two flip-flops there can be many routes, so STA keeps two totals: the <b>longest (max)</b> and the <b>shortest (min)</b>.',
+    analogy: 'Several roads join your home and your office. To be sure you are never late, plan with the slowest road. To know how early someone could possibly arrive, look at the fastest one.',
+    when: ['On every timing path: register to register, input to register, register to output, and input to output.', 'Routes split and join inside logic, so one pair of flip-flops can be connected in many ways.'],
+    why: ['The path with the least setup slack is usually called the <b>critical path</b>. It limits the clock speed.', 'The shortest routes are where <b>hold</b> problems hide.', 'Fixing only the worst path may reveal the next worst, so reports list many paths.'],
+    change: ['<b>To shorten the longest path</b>: fewer logic levels, faster or better-sized cells, shorter wires, or a <b>pipeline</b> flip-flop that splits it in two.', '<b>To lengthen the shortest path</b> (for hold): add delay cells.', 'The aim is to fix one without breaking the other.'],
+    sta: ['STA does not try every input pattern. It tracks the <b>latest</b> and <b>earliest</b> arrival time at each pin and adds delays along the connections.', 'Because it ignores logic values, it can report a path that can never really happen: a <b>false path</b>.', '<code>set_max_delay</code> and <code>set_min_delay</code> can set your own limits on particular paths.']
+  },
+  points: ['<b>Cell delay</b> is the time through a gate. <b>Net delay</b> is the time along the wire.',
+    'The <b>critical path</b> is the one with the worst timing. It limits the clock speed.',
+    'STA keeps two numbers for every pin: the <b>latest</b> (max) and <b>earliest</b> (min) time a signal can arrive.',
+    'Real delays depend on input slew (how sharp the edge is) and output load. Libraries (.lib) store them in tables.'],
+  remember: 'Setup fears the slowest runner. Hold fears the fastest one.',
+  quiz: { q: 'Which delay does a HOLD check use?', options: ['The maximum (longest) path delay', 'The minimum (shortest) path delay', 'The average delay'], answer: 1, why: 'Hold fails when new data arrives too early, so the fastest route is the dangerous one.' }
+});
+
+/* ================================ LEVEL 3: THE CORE CHECKS ================================ */
 const stackRows = (X, rows) => rows.map(r => sx.t(10, r.y + 18, r.name, 'sx-b') + r.parts.filter(q => Math.abs(q[1] - q[0]) > 0.001).map(q => sx.bar(X, q[0], q[1], r.y, q[2], q[3])).join('')).join('');
 const slackMark = (X, a, b, y, slack) => sx.rect(X(Math.min(a, b)), y, Math.max(2, Math.abs(X(b) - X(a))), 16, slack >= -1e-9 ? 'sx-slack-ok' : 'sx-slack-bad', 4)
   + sx.t((X(a) + X(b)) / 2, y + 34, `slack ${slack >= 0 ? '+' : ''}${sn(slack)} ns`, slack >= -1e-9 ? 'sx-b sx-ok-t' : 'sx-b sx-bad-t', 'middle');
 
 lesson({
-  id: 'setup-slack', group: '2 · Core checks', icon: '📏', title: 'Setup check and slack',
+  id: 'setup-slack', group: '3 · Core checks', icon: '📏', title: 'Setup check and slack',
   idea: 'Slack = required time − arrival time. Positive means the path passes.',
   params: [R('T', 'Clock period', 4, 14, 0.25, 10), R('comb', 'Longest logic delay', 1, 12, 0.25, 6), R('tcq', 'Clock-to-Q (max)', 0.25, 3, 0.25, 1), R('tsu', 'Setup time', 0.25, 3, 0.25, 1), R('skew', 'Clock skew', -2, 2, 0.25, 0), R('unc', 'Clock uncertainty', 0, 1.5, 0.25, 0.25)],
   dur: () => 8,
@@ -470,7 +909,7 @@ lesson({
 });
 
 lesson({
-  id: 'hold-slack', group: '2 · Core checks', icon: '✋', title: 'Hold check',
+  id: 'hold-slack', group: '3 · Core checks', icon: '✋', title: 'Hold check',
   idea: 'New data must not rush through and disturb the capture flip-flop on the SAME edge.',
   params: [R('combMin', 'Shortest logic delay', 0, 3, 0.1, 0.6), R('tcqMin', 'Clock-to-Q (min)', 0.1, 1.5, 0.1, 0.4), R('th', 'Hold time', 0.1, 2, 0.1, 0.6), R('skew', 'Clock skew', -1, 2, 0.1, 0.2), R('T', 'Clock period (try it!)', 4, 20, 1, 10)],
   dur: () => 8,
@@ -496,7 +935,7 @@ lesson({
 });
 
 lesson({
-  id: 'skew', group: '2 · Core checks', icon: '🌳', title: 'Clock skew and jitter',
+  id: 'skew', group: '3 · Core checks', icon: '🌳', title: 'Clock skew and jitter',
   idea: 'The clock reaches different flip-flops at slightly different times, and its edges wobble.',
   params: [R('lc', 'Clock delay to FF 1 (launch)', 0, 3, 0.1, 1), R('cc', 'Clock delay to FF 2 (capture)', 0, 3, 0.1, 2), R('jit', 'Jitter / uncertainty', 0, 1, 0.1, 0.2)],
   dur: () => 6,
@@ -541,7 +980,7 @@ const RPT = T => {
   return { rows, req, arrival: sum, required: q, slack: Math.round((q - sum) * 100) / 100 };
 };
 lesson({
-  id: 'report', group: '2 · Core checks', icon: '📄', title: 'Reading a timing report',
+  id: 'report', group: '3 · Core checks', icon: '📄', title: 'Reading a timing report',
   idea: 'A report is the same race written as a table: add up the arrival, then the required time, then subtract.',
   params: [R('T', 'Clock period', 1.5, 3, 0.05, 2)], dur: () => 13, report: RPT,
   result(p) { const r = RPT(p.T); return verdict(r.slack >= -1e-9, `slack (${r.slack >= -1e-9 ? 'MET' : 'VIOLATED'}) = ${r.required.toFixed(2)} − ${r.arrival.toFixed(2)} = ${r.slack.toFixed(2)} ns`); },
@@ -575,7 +1014,7 @@ lesson({
 });
 
 lesson({
-  id: 'fixing', group: '2 · Core checks', icon: '🔧', title: 'Fixing violations',
+  id: 'fixing', group: '3 · Core checks', icon: '🔧', title: 'Fixing violations',
   idea: 'To fix setup, make the slow path faster or give it more time. To fix hold, make the fast path slower.',
   params: [], dur: () => 1,
   toggles: [['logic', 'Setup: simplify the logic'], ['cells', 'Setup: faster (bigger) cells'], ['pipe', 'Setup: add a pipeline stage'], ['skew', 'Setup: useful skew +1 ns'], ['slow', 'Slow the clock +4 ns'], ['buf', 'Hold: add delay buffer']],
@@ -607,7 +1046,7 @@ lesson({
 });
 
 lesson({
-  id: 'sdc', group: '2 · Core checks', icon: '📝', title: 'Constraints (SDC)',
+  id: 'sdc', group: '3 · Core checks', icon: '📝', title: 'Constraints (SDC)',
   idea: 'STA only knows what you tell it. SDC commands describe the clock and the world outside the chip.',
   params: [R('T', 'Clock period', 5, 20, 1, 10), R('idly', 'Outside delay before IN', 0, 9, 0.5, 4), R('odly', 'Outside time needed after OUT', 0, 9, 0.5, 3)],
   dur: () => 6, base: { tsu: 0.8, tcq: 1 },
@@ -633,9 +1072,9 @@ lesson({
   quiz: { q: 'Period is 10 ns, input delay (max) is 6 ns, setup is 0.5 ns. How long may the logic before the first flip-flop take?', options: ['3.5 ns', '4 ns', '10 ns'], answer: 0, why: '10 − 6 − 0.5 = 3.5 ns.' }
 });
 
-/* ================================ LEVEL 3: ADVANCED ================================ */
+/* ================================ LEVEL 4: ADVANCED ================================ */
 lesson({
-  id: 'exceptions', group: '3 · Advanced', icon: '🚦', title: 'False and multicycle paths',
+  id: 'exceptions', group: '4 · Advanced', icon: '🚦', title: 'False and multicycle paths',
   idea: 'Some paths don\'t need to finish in one cycle. You must tell STA, and tell it correctly.',
   options: [{ k: 'mode', label: 'Constraint', def: 'one', choices: [['one', 'Normal (1 cycle)'], ['setup2', '-setup 2 only ⚠️'], ['both', '-setup 2  and  -hold 1']] }],
   params: [R('d', 'Longest path delay', 2, 19, 0.5, 15), R('dmin', 'Shortest path delay', 0.5, 12, 0.5, 2)],
@@ -675,7 +1114,7 @@ lesson({
 });
 
 lesson({
-  id: 'ocv', group: '3 · Advanced', icon: '🌡️', title: 'Corners, OCV and CRPR',
+  id: 'ocv', group: '4 · Advanced', icon: '🌡️', title: 'Corners, OCV and CRPR',
   idea: 'No two chips, voltages or temperatures are the same. STA must pass in all of them, with safety margins.',
   options: [{ k: 'corner', label: 'Process / voltage / temperature corner', def: 'typ', choices: [['fast', 'Fast'], ['typ', 'Typical'], ['slow', 'Slow']] }],
   params: [R('late', 'Late derate (launch + data)', 1, 1.2, 0.01, 1.08, '×'), R('early', 'Early derate (capture clock)', 0.8, 1, 0.01, 0.92, '×'), R('common', 'Shared clock path delay', 0, 3, 0.1, 2)],
@@ -708,7 +1147,7 @@ lesson({
 });
 
 lesson({
-  id: 'reset', group: '3 · Advanced', icon: '🔄', title: 'Recovery and removal',
+  id: 'reset', group: '4 · Advanced', icon: '🔄', title: 'Recovery and removal',
   idea: 'Releasing an asynchronous reset has its own setup-like and hold-like rules.',
   params: [R('dt', 'When reset is released (0 = clock edge)', -4, 4, 0.1, -2.5), R('rec', 'Recovery time', 0.5, 2.5, 0.1, 1.4), R('rem', 'Removal time', 0.2, 2, 0.1, 0.8)],
   dur: () => 10,
@@ -733,7 +1172,7 @@ lesson({
 });
 
 lesson({
-  id: 'cdc', group: '3 · Advanced', icon: '🌉', title: 'Clock domain crossing',
+  id: 'cdc', group: '4 · Advanced', icon: '🌉', title: 'Clock domain crossing',
   idea: 'With unrelated clocks, no delay can guarantee setup and hold. STA cannot fix this: the design must.',
   params: [R('Tb', 'Period of clock B (A is 10 ns)', 6, 13, 0.1, 7.3), R('phase', 'Phase of clock B', 0, 6, 0.1, 2.5)],
   toggles: [['sync', 'Add a 2-flip-flop synchronizer']],
@@ -771,7 +1210,7 @@ lesson({
 });
 
 lesson({
-  id: 'latch', group: '3 · Advanced', icon: '🪟', title: 'Latches and time borrowing',
+  id: 'latch', group: '4 · Advanced', icon: '🪟', title: 'Latches and time borrowing',
   idea: 'A latch stays open for part of the cycle, so slow logic can borrow time from the next stage.',
   params: [R('comb', 'Logic before the latch', 3, 16, 0.25, 11)], dur: () => 20,
   base: { T: 10, tcq: 1, tsu: 0.5, open: 5 },
@@ -907,7 +1346,7 @@ const STA_PRACTICE = {
 };
 lesson({ id: 'practice', group: '🎯 Practice', icon: '🧮', title: 'Practice arena and cheat sheet', idea: 'Solve fresh problems until the formulas stick.', practice: true, remember: 'Setup: required − arrival. Hold: arrival − required.' });
 
-if (typeof module !== 'undefined') module.exports = { STA_CALC, STA_LESSONS, STA_PRACTICE, STA_FORMULAS, sx };
+if (typeof module !== 'undefined') module.exports = { DELAY_GROUP, STA_CALC, STA_LESSONS, STA_PRACTICE, STA_FORMULAS, sx };
 if (typeof window !== 'undefined') Object.assign(window, { STA_CALC, STA_LESSONS, STA_PRACTICE });
 
 /* =====================================================================================
@@ -916,6 +1355,7 @@ if (typeof window !== 'undefined') Object.assign(window, { STA_CALC, STA_LESSONS
    ===================================================================================== */
 if (typeof document !== 'undefined') window.STA_UI = (() => {
   const SECONDS = { flipflop: 12, report: 18, cdc: 18, latch: 9, 'setup-slack': 9, 'hold-slack': 9 };   // length of one loop
+  const STEP_SECONDS = 6;   // lessons told in steps give each step this long, so there is time to read
   const calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   let id = null, P = {}, t = 0, playing = !calm, last = 0, hold = 0, looping = false;
   let seed = 1 + Math.floor(Math.random() * 100000), right = 0, tried = 0;
@@ -952,7 +1392,7 @@ if (typeof document !== 'undefined') window.STA_UI = (() => {
     if (playing && animated(l) && !view().hidden && !document.hidden) {
       const dur = l.dur(P);
       if (t >= dur) { hold += dt; if (hold > 1.6) { t = 0; hold = 0; } }
-      else { t = Math.min(dur, t + dt * dur / (SECONDS[l.id] || 7)); frame(); }
+      else { t = Math.min(dur, t + dt * dur / (l.steps ? dur * STEP_SECONDS : SECONDS[l.id] || 7)); frame(); }
       if (t === 0) frame();
     }
     requestAnimationFrame(loop);
@@ -974,6 +1414,9 @@ if (typeof document !== 'undefined') window.STA_UI = (() => {
     return `<div class="sta-nav">${prev ? `<button class="chip" data-sta="${prev.id}">← ${prev.title}</button>` : '<span></span>'}${next ? `<button class="chip sta-next" data-sta="${next.id}">Next: ${next.title} →</button>` : '<button class="chip sta-next" data-sta="">All lessons</button>'}</div>`;
   };
 
+  const EXPLAIN = [['what', '💡 What is it?'], ['analogy', '🌍 Everyday picture'], ['when', '🕒 When does it happen?'], ['why', '⚠️ Why does it matter?'], ['change', '🎛️ What makes it bigger or smaller?'], ['sta', '🔎 Where you meet it in STA']];
+  const explainHTML = e => `<h2 class="sec">📚 The full explanation</h2><div class="sta-explain">${EXPLAIN.map(([k, head]) => `<section class="sta-ex-${k}"><h3>${head}</h3>${Array.isArray(e[k]) ? `<ul>${e[k].map(x => `<li>${x}</li>`).join('')}</ul>` : `<p>${e[k]}</p>`}</section>`).join('')}</div>`;
+
   function renderLesson() {
     const l = cur(), i = STA_LESSONS.indexOf(l);
     if (l.practice) return renderPractice(l, i);
@@ -991,7 +1434,8 @@ if (typeof document !== 'undefined') window.STA_UI = (() => {
         <div id="sta-verdict" class="sta-verdict" aria-live="polite"></div>
         ${l.code ? '<div class="gcode"><div class="gcode-h"><span>📝 SDC constraints</span><button class="chip" id="sta-copy">Copy</button></div><pre id="sta-code" class="sta-pre"></pre></div>' : ''}
       </div>
-      ${l.table ? `<h2 class="sec">📋 All formulas at a glance</h2><div class="sta-sheet sta-formulas">${l.table.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>` : ''}
+      ${l.explain ? explainHTML(l.explain) : ''}
+      ${l.table ? `<h2 class="sec">${l.tableTitle || '📋 All formulas at a glance'}</h2><div class="sta-sheet sta-formulas">${l.table.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>` : ''}
       ${l.points ? `<h2 class="sec">Key points</h2><ul class="sta-points">${l.points.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
       <div class="sta-remember"><span>🧠</span><div><small>Remember it</small><b>${l.remember}</b></div></div>
       <div class="sta-quiz"><h3>❓ Quick check</h3><p>${l.quiz.q}</p><div class="sta-answers">${l.quiz.options.map((o, n) => `<button class="opt" data-ans="${n}">${o}</button>`).join('')}</div><p id="sta-why" aria-live="polite"></p></div>
@@ -1012,7 +1456,9 @@ if (typeof document !== 'undefined') window.STA_UI = (() => {
     });
     if (hasTime) {
       q('#sta-play').onclick = () => { playing = !playing; if (playing && t >= l.dur(P)) t = 0; frame(); };
-      const step = d => { playing = false; t = Math.max(0, Math.min(l.dur(P), t + d * (l.id === 'report' ? 1 : l.dur(P) / 10))); frame(); };
+      // in lessons told in steps, ⏮ and ⏭ show the finished picture of the previous or next step
+      const jump = d => { const n = l.dur(P), now = Math.min(n - 1, Math.floor(t)), k = Math.max(0, Math.min(n - 1, now + d)); t = k === n - 1 ? n : k + 0.999; };
+      const step = d => { playing = false; if (l.steps) { jump(d); frame(); return; } t = Math.max(0, Math.min(l.dur(P), t + d * (l.id === 'report' ? 1 : l.dur(P) / 10))); frame(); };
       q('#sta-back').onclick = () => step(-1); q('#sta-fwd').onclick = () => step(1);
       q('#sta-scrub').oninput = e => { playing = false; t = Number(e.target.value) / 1000 * l.dur(P); frame(); };
     }

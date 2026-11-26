@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-const { STA_CALC: C, STA_LESSONS: L, STA_PRACTICE: P, STA_FORMULAS: F } = createRequire(import.meta.url)('../sta.js');
+const { DELAY_GROUP, STA_CALC: C, STA_LESSONS: L, STA_PRACTICE: P, STA_FORMULAS: F } = createRequire(import.meta.url)('../sta.js');
 
 let fails = 0, checks = 0;
 const ok = (cond, label) => { checks++; if (!cond) { fails++; if (fails <= 15) console.log('  ✗ ' + label); } };
@@ -81,6 +81,30 @@ ok(F.length === book.options[0].choices.length && F.every(x => book.params.some(
 let longest = '';
 for (const s of settings(book)) { const r = F.find(x => x.id === s.f).f(s); for (const line of [...r.eq, ...r.num, r.ans]) if (line.length > longest.length) longest = line; for (const line of r.where) if (line.length > 88) longest = line; }
 ok(longest.length <= 80, `a formula line is too long for the drawing (${longest.length}): ${longest}`);
+
+// ---------- the delay lessons: hand-worked numbers and complete explanations ----------
+const xt = n => C.crosstalk({ base: 1, coupling: 0.4, neighbour: n, overlap: true });
+near(xt('quiet').delay, 1, 'quiet neighbour'); near(xt('opposite').delay, 1.4, 'opposite neighbour slows'); near(xt('same').delta, -0.4, 'same-direction neighbour speeds up');
+near(C.crosstalk({ base: 1, coupling: 0.4, neighbour: 'opposite', overlap: false }).delta, 0, 'no overlap, no delta delay');
+near(C.outputDelay({ tsu: 1.5, wireMax: 1 }).max, 2.5, 'output delay max = board + setup');
+near(C.outputDelay({ th: 0.5, wireMin: 0.2 }).min, -0.3, 'output delay min = board - hold, can be negative');
+const run = (id, extra = {}) => byId(id).result({ ...defaults(byId(id)), ...extra }).text;
+for (const [id, want, extra] of [['delay-contamination', 'Hold slack = -0.4 ns'], ['delay-transition', 'cell delay of 0.96 ns'], ['delay-cell', '= 1.28 ns'], ['delay-cell', '= 0.74 ns', { size: '4' }],
+  ['delay-crosstalk', 'Victim wire delay 1.4 ns'], ['delay-clock', 'Skew (B minus A) = +0.6 ns'], ['delay-input', 'Slack 1.2 ns'], ['delay-output', 'Slack 1.5 ns']])
+  ok(run(id, extra).includes(want), `${id} should say "${want}" but says "${run(id, extra)}"`);
+const delayLessons = L.filter(l => l.group === DELAY_GROUP);
+ok(delayLessons.length === 12, 'there are 12 lessons about delays');
+for (const l of delayLessons) {
+  const e = l.explain || {};
+  ok(['what', 'analogy'].every(k => e[k]?.length > 40) && ['when', 'why', 'change', 'sta'].every(k => e[k]?.length >= 2), `${l.id}: explains what, an everyday picture, when, why, what changes it and where STA uses it`);
+  // every link in the text must point to a lesson that exists
+  for (const m of JSON.stringify([e, l.points]).matchAll(/#sta\/([a-z-]+)/g)) ok(!!byId(m[1]), `${l.id}: link to missing lesson ${m[1]}`);
+  if (!l.steps) continue;
+  for (const p of settings(l)) {
+    const steps = l.steps(p);
+    if (l.dur(p) !== steps.length || steps.some((text, k) => !l.say(k + 0.5, p).startsWith(`Step ${k + 1} of ${steps.length}: `) || text.length < 30)) { ok(false, `${l.id}: steps and captions disagree with ${JSON.stringify(p)}`); break; }
+  }
+}
 
 // ---------- every animation, at many times and slider extremes ----------
 function settings(l) {

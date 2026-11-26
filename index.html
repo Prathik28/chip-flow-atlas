@@ -643,6 +643,16 @@ footer{margin-top:48px}
 .sta-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sta-form input{width:150px;padding:9px 14px;font:inherit;font-weight:800;border:2.5px solid var(--ink);border-radius:999px;box-shadow:2px 2px 0 var(--ink)}
 .sta-score{color:var(--muted);font-weight:700;font-size:13.5px;margin-bottom:0}
+.sta-explain{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sta-explain section{background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:var(--pop);padding:12px 18px}
+.sta-explain h3{margin:0 0 6px;font-size:17px}
+.sta-explain p{margin:0;line-height:1.6}
+.sta-explain ul{margin:0;padding-left:20px}
+.sta-explain li{margin:6px 0;line-height:1.55}
+.sta-explain code{background:#fff1cf;border:1.5px solid var(--ink);border-radius:6px;padding:0 5px;font:13.5px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
+.sta-explain .sta-ex-what{grid-column:1/-1;background:#e7f5ff;font-size:17px}
+.sta-explain .sta-ex-analogy{grid-column:1/-1;background:#fff4d6}
+@media(max-width:760px){.sta-explain{grid-template-columns:1fr}}
 .sta-sheet{display:grid;gap:8px}
 .sta-sheet div{display:grid;grid-template-columns:160px 1fr;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:10px 14px}
 .sta-sheet span{font-weight:700}
@@ -678,7 +688,7 @@ footer{margin-top:48px}
 .sx-ff.sx-lit,.sx-logic.sx-lit{fill:#ffd43b}
 .sx-chip{fill:#f1f3f5;stroke:#241c3a;stroke-width:2.5;stroke-dasharray:9 5}
 .sx-port,.sx-sample{stroke:#241c3a;stroke-width:2.5}.sx-port{fill:#74c0fc}.sx-sample{fill:#ffd43b}
-.sx-dot{fill:#5b4bdb;stroke:#241c3a;stroke-width:2.5}.sx-dot.sx-alt{fill:#20c997}.sx-dot.sx-bad{fill:#fa5252}.sx-dot.sx-ck{fill:#4dabf7}
+.sx-dot{fill:#5b4bdb;stroke:#241c3a;stroke-width:2.5}.sx-dot.sx-ink{fill:#241c3a}.sx-dot.sx-alt{fill:#20c997}.sx-dot.sx-bad{fill:#fa5252}.sx-dot.sx-ck{fill:#4dabf7}
 .sx-veil{fill:#fffdf7;opacity:.82}
 .sx-grid-a,.sx-grid-b{fill:none;stroke-width:1.6;stroke-dasharray:2 4;stroke-linecap:round;opacity:.6}
 .sx-grid-a{stroke:#1c7ed6}.sx-grid-b{stroke:#9c36b5}
